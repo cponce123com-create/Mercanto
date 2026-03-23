@@ -136,3 +136,41 @@ export async function sendWeeklySummaryEmail(
     </div>`;
   await sendEmail(to, `Tu resumen semanal en Mercanto — ${storeName}`, html);
 }
+
+export async function sendIdentityApprovedEmail(to: string, name: string) {
+  const frontendUrl = process.env.FRONTEND_URL || "https://mercanto.pe";
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#16a34a;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:24px">¡Identidad Verificada!</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${name}</strong>,</p>
+        <p style="font-size:15px;color:#444">Hemos verificado tu DNI exitosamente. Ya puedes crear tu tienda en Mercanto y comenzar a vender.</p>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${frontendUrl}/create-store" style="background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Crear mi tienda</a>
+        </div>
+        <p style="font-size:13px;color:#999;margin-top:32px">Si tienes preguntas, escríbenos a soporte@mercanto.pe</p>
+      </div>
+    </div>`;
+  await sendEmail(to, "✅ Tu identidad ha sido verificada en Mercanto", html);
+}
+
+export async function sendIdentityRejectedEmail(to: string, name: string, reason: string) {
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#ef4444;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:24px">Verificación No Aprobada</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${name}</strong>,</p>
+        <p style="font-size:15px;color:#444">Lamentablemente no pudimos aprobar tu verificación de identidad. El motivo es:</p>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin:16px 0">
+          <p style="margin:0;color:#991b1b;font-weight:500">${reason}</p>
+        </div>
+        <p style="font-size:15px;color:#444">Por favor sube nuevas fotos claras de tu DNI y vuelve a intentarlo.</p>
+        <p style="font-size:13px;color:#999;margin-top:32px">Si crees que es un error, escríbenos a soporte@mercanto.pe</p>
+      </div>
+    </div>`;
+  await sendEmail(to, "❌ Verificación de identidad rechazada en Mercanto", html);
+}

@@ -87,7 +87,7 @@ router.get("/my", requireVendor, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const { district, category, search, sort, page: pageStr, limit: limitStr, featured, lat: latStr, lng: lngStr, radiusKm: radiusStr } = req.query as Record<string, string>;
+    const { district, category, search, sort, page: pageStr, limit: limitStr, featured, lat: latStr, lng: lngStr, radiusKm: radiusStr, storeType } = req.query as Record<string, string>;
     const page = Math.max(1, parseInt(pageStr || "1"));
     const limit = Math.min(50, parseInt(limitStr || "12"));
     const offset = (page - 1) * limit;
@@ -95,9 +95,13 @@ router.get("/", async (req, res) => {
     const userLat = latStr ? parseFloat(latStr) : null;
     const userLng = lngStr ? parseFloat(lngStr) : null;
     const radiusKm = radiusStr ? parseFloat(radiusStr) : 10;
-
     const conditions = [eq(storesTable.status, "active")];
-    if (district) conditions.push(eq(storesTable.district, district));
+    if (storeType === "producer") {
+      conditions.push(eq(storesTable.storeType, "producer"));
+    } else if (!storeType || storeType === "local") {
+      conditions.push(eq(storesTable.storeType, "local"));
+    }
+    if (district && storeType !== "producer") conditions.push(eq(storesTable.district, district));
     if (featured === "true") conditions.push(eq(storesTable.isFeatured, true));
     if (userLat !== null && userLng !== null) {
       conditions.push(isNotNull(storesTable.lat));
@@ -121,6 +125,7 @@ router.get("/", async (req, res) => {
       district: storesTable.district, lat: storesTable.lat, lng: storesTable.lng,
       whatsapp: storesTable.whatsapp, instagram: storesTable.instagram,
       facebook: storesTable.facebook, website: storesTable.website,
+      storeType: storesTable.storeType,
       status: storesTable.status, isFeatured: storesTable.isFeatured,
       totalVisits: storesTable.totalVisits, createdAt: storesTable.createdAt, updatedAt: storesTable.updatedAt,
       paymentMethods: storesTable.paymentMethods, openingHours: storesTable.openingHours,
@@ -206,7 +211,30 @@ router.post("/", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Bad Request", message: "You already have a store" });
       return;
     }
-    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId, paymentMethods, openingHours, doesDelivery, deliveryRadius } = req.body;
+
+    const [currentUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (!currentUser?.dniNumber || !currentUser?.dniFrontUrl || !currentUser?.dniBackUrl) {
+      res.status(400).json({ error: "Bad Request", message: "Debes completar tu verificación de identidad (DNI) antes de crear una tienda." });
+      return;
+    }
+
+    const usersWithSameDni = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.dniNumber, currentUser.dniNumber));
+    if (usersWithSameDni.length > 0) {
+      const storeForDni = await db
+        .select({ id: storesTable.id })
+        .from(storesTable)
+        .where(and(...usersWithSameDni.map(u => eq(storesTable.userId, u.id))))
+        .limit(1);
+      if (storeForDni.length > 0) {
+        res.status(403).json({ error: "Forbidden", message: "Ya existe una tienda registrada con este DNI." });
+        return;
+      }
+    }
+
+    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId, paymentMethods, openingHours, doesDelivery, deliveryRadius, storeType } = req.body;
     if (!name) {
       res.status(400).json({ error: "Bad Request", message: "name is required" });
       return;
@@ -219,10 +247,10 @@ router.post("/", requireAuth, async (req, res) => {
       openingHours: openingHours ? JSON.stringify(openingHours) : null,
       doesDelivery: doesDelivery ?? false,
       deliveryRadius: deliveryRadius ?? null,
+      storeType: storeType === "producer" ? "producer" : "local",
       status: "pending",
     }).returning();
     // Only upgrade to vendor if user is a plain user (don't downgrade admins)
-    const [currentUser] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (currentUser?.role === "user") {
       await db.update(usersTable).set({ role: "vendor" }).where(eq(usersTable.id, userId));
     }

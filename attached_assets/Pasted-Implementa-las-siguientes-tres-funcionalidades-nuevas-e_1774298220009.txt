@@ -1,0 +1,43 @@
+Implementa las siguientes tres funcionalidades nuevas en Mercanto. Son independientes entre sí, impleméntalas en orden.
+
+FUNCIONALIDAD 1 — Modalidad "Compra al Productor"
+El marketplace ahora tiene dos modos de venta: tiendas vecinales (pickup local) y productores (venta con envío a cualquier distrito). Implementa lo siguiente:
+En el schema lib/db/src/schema/index.ts, agrega el campo storeType a storesTable:
+tsstoreType: text("store_type").default("local").notNull(), // "local" | "producer"
+Genera la migración con Drizzle.
+En el formulario de creación de tienda (create-store.tsx), agrega un paso inicial donde el usuario elige el tipo:
+
+"Tienda vecinal" — vendo a vecinos de mi distrito, recogen en mi local
+"Productor / Mayorista" — vendo a todo el país, coordino envío y precio con el comprador
+
+En la página de detalle de tienda, si storeType === "producer", reemplaza el botón de WhatsApp por un formulario de consulta con los campos: nombre, teléfono, distrito de destino, cantidad aproximada, mensaje. Al enviar, dispara un email al vendedor con sendEmail usando la función que ya existe en services/email.ts con asunto "Nueva consulta de compra para tu tienda".
+En el home y en el listado de tiendas, agrega un tab o toggle visible: "Tiendas cercanas" / "Productores nacionales". Cuando se selecciona "Productores nacionales", el filtro de distrito se ignora y se muestran tiendas con storeType = "producer" de todo el país, ordenadas por isFeatured y luego por totalVisits.
+Agrega el filtro storeType al endpoint GET /api/stores en el backend.
+
+FUNCIONALIDAD 2 — Verificación de identidad con DNI al crear tienda
+El objetivo es evitar tiendas falsas y limitar una tienda por persona real.
+En el schema, agrega a usersTable:
+tsdniNumber: text("dni_number").unique(),
+dniFrontUrl: text("dni_front_url"),
+dniFrontPublicId: text("dni_front_public_id"),
+dniBackUrl: text("dni_back_url"),
+dniBackPublicId: text("dni_back_public_id"),
+identityVerified: boolean("identity_verified").default(false),
+identityRejectedReason: text("identity_rejected_reason"),
+Genera la migración.
+En el endpoint POST /api/stores del backend, antes de crear la tienda verifica que:
+
+El usuario tiene dniNumber, dniFrontUrl y dniBackUrl en su perfil (si no, responde 400 con mensaje claro).
+No existe ya otra tienda creada por un usuario con ese mismo dniNumber (busca en usersTable filtrando por dniNumber y luego en storesTable). Si ya existe, responde 403 con "Ya existe una tienda registrada con este DNI".
+
+En el endpoint PUT /api/auth/profile, permite actualizar dniNumber, dniFrontUrl, dniFrontPublicId, dniBackUrl, dniBackPublicId.
+En el formulario de creación de tienda (create-store.tsx), agrega un nuevo paso previo a los actuales llamado "Verificación de identidad" con:
+
+Campo de texto para ingresar el número de DNI (8 dígitos, validación con zod: z.string().regex(/^\d{8}$/, "DNI debe tener 8 dígitos"))
+Dos componentes ImageUpload (ya existe en el proyecto) para la foto frontal y posterior del DNI con etiquetas claras
+Texto explicativo: "Esta información es confidencial, solo la usa el equipo de Mercanto para verificar tu identidad. No se mostrará públicamente."
+Al continuar, llama a PUT /api/auth/profile con los datos del DNI antes de proceder al siguiente paso
+
+En el panel admin (routes/admin.ts), agrega el endpoint GET /admin/verifications que devuelve usuarios con dniFrontUrl no nulo e identityVerified = false, incluyendo sus URLs de DNI. Agrega también PUT /admin/verifications/:userId que acepta { action: "approve" | "reject", reason?: string } y actualiza identityVerified y identityRejectedReason. Al aprobar, dispara un email al usuario con sendEmail avisando que su identidad fue verificada. Al rechazar, envía email con el motivo.
+En el panel admin del frontend, agrega una sección "Verificaciones pendientes" que muestre la lista de usuarios con DNI pendiente, con sus fotos y un botón de Aprobar / Rechazar.
+En el endpoint PUT /upload/sign, agrega "users/dni" como carpeta permitida para las fotos de DNI.

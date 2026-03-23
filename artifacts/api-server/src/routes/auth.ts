@@ -95,9 +95,19 @@ router.get("/me", requireAuth, async (req, res) => {
 router.put("/profile", requireAuth, async (req, res) => {
   try {
     const userId = req.userId;
-    const { name, phone, district, avatarUrl } = req.body;
+    const { name, phone, district, avatarUrl, dniNumber, dniFrontUrl, dniFrontPublicId, dniBackUrl, dniBackPublicId } = req.body;
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+    if (name !== undefined) updateData.name = name;
+    if (phone !== undefined) updateData.phone = phone;
+    if (district !== undefined) updateData.district = district;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (dniNumber !== undefined) updateData.dniNumber = dniNumber;
+    if (dniFrontUrl !== undefined) updateData.dniFrontUrl = dniFrontUrl;
+    if (dniFrontPublicId !== undefined) updateData.dniFrontPublicId = dniFrontPublicId;
+    if (dniBackUrl !== undefined) updateData.dniBackUrl = dniBackUrl;
+    if (dniBackPublicId !== undefined) updateData.dniBackPublicId = dniBackPublicId;
     const [updated] = await db.update(usersTable)
-      .set({ name, phone, district, avatarUrl, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(usersTable.id, userId))
       .returning();
     const { passwordHash: _h, ...userPublic } = updated;

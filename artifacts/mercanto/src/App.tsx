@@ -26,6 +26,7 @@ import AdminStoreDetail from "@/pages/admin/store-detail";
 import AdminUsers from "@/pages/admin/users";
 import AdminCategories from "@/pages/admin/categories";
 import AdminBanners from "@/pages/admin/banners";
+import AdminVerifications from "@/pages/admin/verifications";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,6 +112,7 @@ function Router() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/categories" component={AdminCategories} />
         <Route path="/admin/banners" component={AdminBanners} />
+        <Route path="/admin/verifications" component={AdminVerifications} />
 
         <Route component={NotFound} />
       </Switch>

@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, storesTable, productsTable, productImagesTable, reviewsTable, categoriesTable, bannersTable } from "@workspace/db";
-import { eq, desc, asc, count, sql, inArray } from "drizzle-orm";
+import { eq, desc, asc, count, sql, inArray, and, isNotNull } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth.js";
-import { sendStoreApprovedEmail } from "../services/email.js";
+import { sendStoreApprovedEmail, sendIdentityApprovedEmail, sendIdentityRejectedEmail } from "../services/email.js";
 
 const router: IRouter = Router();
 
@@ -393,6 +393,59 @@ router.put("/reviews/:id/visible", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal Server Error", message: "Failed to toggle review" });
+  }
+});
+
+// ─── Identity Verifications ───────────────────────────────────────────────────
+
+router.get("/verifications", async (req, res) => {
+  try {
+    const users = await db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+        dniNumber: usersTable.dniNumber,
+        dniFrontUrl: usersTable.dniFrontUrl,
+        dniBackUrl: usersTable.dniBackUrl,
+        identityVerified: usersTable.identityVerified,
+        identityRejectedReason: usersTable.identityRejectedReason,
+        createdAt: usersTable.createdAt,
+      })
+      .from(usersTable)
+      .where(and(isNotNull(usersTable.dniFrontUrl), eq(usersTable.identityVerified, false)))
+      .orderBy(desc(usersTable.createdAt));
+    res.json(users);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to get verifications" });
+  }
+});
+
+router.put("/verifications/:userId", async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { action, reason } = req.body as { action: "approve" | "reject"; reason?: string };
+    if (!["approve", "reject"].includes(action)) {
+      res.status(400).json({ error: "Bad Request", message: "action must be approve or reject" });
+      return;
+    }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (!user) {
+      res.status(404).json({ error: "Not Found", message: "User not found" });
+      return;
+    }
+    if (action === "approve") {
+      await db.update(usersTable).set({ identityVerified: true, identityRejectedReason: null, updatedAt: new Date() }).where(eq(usersTable.id, userId));
+      sendIdentityApprovedEmail(user.email, user.name).catch(() => {});
+    } else {
+      await db.update(usersTable).set({ identityVerified: false, identityRejectedReason: reason || "No especificado", updatedAt: new Date() }).where(eq(usersTable.id, userId));
+      sendIdentityRejectedEmail(user.email, user.name, reason || "No especificado").catch(() => {});
+    }
+    res.json({ success: true, action });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to update verification" });
   }
 });
 

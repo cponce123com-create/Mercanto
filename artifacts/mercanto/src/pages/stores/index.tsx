@@ -8,7 +8,7 @@ import { StoreCard } from "@/components/shared/StoreCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight, MapPin, Navigation } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight, MapPin, Navigation, ShoppingBag, Tractor } from "lucide-react";
 import { toast } from "sonner";
 
 const PAGE_SIZE = 24;
@@ -19,7 +19,9 @@ export default function StoresDirectory() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const initialCategory = searchParams.get("category") || "all";
+  const initialTab = (searchParams.get("tab") as "local" | "producer") || "local";
 
+  const [activeTab, setActiveTab] = useState<"local" | "producer">(initialTab);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState<"newest" | "name" | "visits">("newest");
@@ -56,8 +58,9 @@ export default function StoresDirectory() {
   }, [nearbyCoords]);
   
   const { data, isLoading } = useListStores({
-    district: district !== 'all' ? district : undefined,
-    category: category !== 'all' ? category : undefined,
+    storeType: activeTab,
+    district: activeTab === "local" && district !== "all" ? district : undefined,
+    category: category !== "all" ? category : undefined,
     search: search || undefined,
     sort,
     page,
@@ -72,8 +75,8 @@ export default function StoresDirectory() {
   const total = data?.total ?? 0;
 
   const resetFilters = () => {
-    setSearch('');
-    setCategory('all');
+    setSearch("");
+    setCategory("all");
     setPage(1);
   };
 
@@ -82,17 +85,47 @@ export default function StoresDirectory() {
     setPage(1);
   };
 
+  const handleTabChange = (tab: "local" | "producer") => {
+    setActiveTab(tab);
+    setPage(1);
+    setNearbyCoords(null);
+    setSearch("");
+    setCategory("all");
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      
+
+      {/* Tab switcher */}
       <div className="bg-white border-b sticky top-14 md:top-16 z-40">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-0">
+            <button
+              onClick={() => handleTabChange("local")}
+              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "local" ? "border-[#2563EB] text-[#2563EB]" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Tiendas Locales
+            </button>
+            <button
+              onClick={() => handleTabChange("producer")}
+              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === "producer" ? "border-green-600 text-green-600" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <Tractor className="w-4 h-4" />
+              Compra al Productor
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar tiendas..." 
+              <Input
+                placeholder={activeTab === "producer" ? "Buscar productores..." : "Buscar tiendas..."}
                 className="pl-9 bg-secondary/30 border-transparent focus-visible:ring-primary"
                 value={search}
                 onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
@@ -153,15 +186,18 @@ export default function StoresDirectory() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <h1 className="text-xl sm:text-3xl font-display font-bold">Directorio de Comercios</h1>
+            <h1 className="text-xl sm:text-3xl font-display font-bold">
+              {activeTab === "producer" ? "Compra al Productor" : "Directorio de Comercios"}
+            </h1>
             <p className="text-muted-foreground mt-2">
               {isLoading ? (
-                "Cargando tiendas..."
+                "Cargando..."
               ) : (
                 <>
-                  <strong className="text-foreground">{total}</strong> tienda{total !== 1 ? 's' : ''} en{' '}
-                  <strong className="text-foreground">{district === 'all' ? 'Chanchamayo' : district}</strong>
-                  {category !== 'all' && categories && ` · ${categories.find(c => c.slug === category)?.name}`}
+                  <strong className="text-foreground">{total}</strong>{" "}
+                  {activeTab === "producer" ? "productor" : "tienda"}{total !== 1 ? "s" : ""}{" "}
+                  {activeTab === "local" && <> en <strong className="text-foreground">{district === "all" ? "Chanchamayo" : district}</strong></>}
+                  {category !== "all" && categories && ` · ${categories.find(c => c.slug === category)?.name}`}
                 </>
               )}
             </p>

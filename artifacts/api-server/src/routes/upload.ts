@@ -25,7 +25,7 @@ router.post("/sign", requireAuth, (req, res) => {
     fileSize?: number;
   };
 
-  const allowedFolders = ["stores/logos", "stores/banners", "products"];
+  const allowedFolders = ["stores/logos", "stores/banners", "products", "users/dni"];
   if (!folder || !allowedFolders.includes(folder)) {
     res.status(400).json({
       error: "Carpeta inválida",

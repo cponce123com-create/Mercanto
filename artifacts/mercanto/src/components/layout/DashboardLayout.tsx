@@ -66,6 +66,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
     { href: "/admin/users", label: "Usuarios", icon: Users },
     { href: "/admin/categories", label: "Categorías", icon: Tag },
     { href: "/admin/banners", label: "Banners", icon: ImageIcon },
+    { href: "/admin/verifications", label: "Verificaciones DNI", icon: ShieldCheck },
   ];
 
   const links = role === 'admin' ? adminLinks : vendorLinks;
