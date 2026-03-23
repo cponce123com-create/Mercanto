@@ -61,6 +61,7 @@ router.get("/", async (req, res) => {
           unit: productsTable.unit, status: productsTable.status, sortOrder: productsTable.sortOrder,
           createdAt: productsTable.createdAt,
           categoryName: categoriesTable.name, categorySlug: categoriesTable.slug, categoryIcon: categoriesTable.icon,
+          storeName: storesTable.name, storeSlug: storesTable.slug, storeDistrict: storesTable.district,
         })
         .from(productsTable)
         .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
@@ -84,8 +85,11 @@ router.get("/", async (req, res) => {
       }, {} as Record<number, typeof images>);
 
       products.push(...foundProducts.map(p => ({
-        ...p,
+        id: p.id, storeId: p.storeId, name: p.name, slug: p.slug, description: p.description,
+        price: p.price, offerPrice: p.offerPrice, stock: p.stock, unit: p.unit,
+        status: p.status, sortOrder: p.sortOrder, createdAt: p.createdAt,
         category: p.categoryId ? { id: p.categoryId, name: p.categoryName, slug: p.categorySlug, icon: p.categoryIcon } : null,
+        store: { name: p.storeName, slug: p.storeSlug, district: p.storeDistrict },
         images: (imagesByProduct[p.id] || []).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
       })));
     }
