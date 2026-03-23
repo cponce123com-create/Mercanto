@@ -192,7 +192,11 @@ router.post("/", requireAuth, async (req, res) => {
       whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId,
       status: "pending",
     }).returning();
-    await db.update(usersTable).set({ role: "vendor" }).where(eq(usersTable.id, userId));
+    // Only upgrade to vendor if user is a plain user (don't downgrade admins)
+    const [currentUser] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (currentUser?.role === "user") {
+      await db.update(usersTable).set({ role: "vendor" }).where(eq(usersTable.id, userId));
+    }
     const [category] = categoryId ? await db.select().from(categoriesTable).where(eq(categoriesTable.id, categoryId)).limit(1) : [];
     res.json({ ...store, category: category || null });
   } catch (err) {
