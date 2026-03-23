@@ -77,7 +77,7 @@ router.get("/", requireVendor, async (req, res) => {
 
 router.get("/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const product = await getProductWithImages(id);
     if (!product) {
       res.status(404).json({ error: "Not Found", message: "Product not found" });
@@ -140,7 +140,7 @@ router.post("/", requireVendor, async (req, res) => {
 router.put("/:id", requireVendor, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.userId, userId)).limit(1);
     if (!store) {
       res.status(403).json({ error: "Forbidden" });
@@ -182,7 +182,7 @@ router.delete("/:id", requireVendor, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const userRole = (req as any).userRole;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.userId, userId)).limit(1);
     if (!store && userRole !== "admin") {
       res.status(403).json({ error: "Forbidden" });
@@ -200,7 +200,7 @@ router.delete("/:id", requireVendor, async (req, res) => {
 router.put("/:id/toggle", requireVendor, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.userId, userId)).limit(1);
     if (!store) {
       res.status(403).json({ error: "Forbidden" });

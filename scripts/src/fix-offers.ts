@@ -27,7 +27,7 @@ async function main() {
     const p1 = products[0];
     const offerPrice1 = (parseFloat(p1.price) * 0.75).toFixed(2);
     await db.update(productsTable)
-      .set({ isOffer: true, offerPrice: offerPrice1 })
+      .set({ offerPrice: offerPrice1 })
       .where(eq(productsTable.id, p1.id));
     updated++;
 
@@ -36,7 +36,7 @@ async function main() {
       const p2 = products[1];
       const offerPrice2 = (parseFloat(p2.price) * 0.85).toFixed(2);
       await db.update(productsTable)
-        .set({ isOffer: true, offerPrice: offerPrice2 })
+        .set({ offerPrice: offerPrice2 })
         .where(eq(productsTable.id, p2.id));
       updated++;
     }

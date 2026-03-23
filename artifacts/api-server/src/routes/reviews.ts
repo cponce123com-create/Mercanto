@@ -9,7 +9,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const userRole = (req as any).userRole;
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const [review] = await db.select().from(reviewsTable).where(eq(reviewsTable.id, id)).limit(1);
     if (!review) {
       res.status(404).json({ error: "Not Found", message: "Review not found" });

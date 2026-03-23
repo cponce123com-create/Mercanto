@@ -3,15 +3,16 @@ import jwt from "jsonwebtoken";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "mercanto-dev-secret-2024";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
 
 export function signToken(payload: { userId: number; role: string }) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign(payload, JWT_SECRET!, { expiresIn: "30d" });
 }
 
 export function verifyToken(token: string): { userId: number; role: string } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
+    const decoded = jwt.verify(token, JWT_SECRET!) as { userId: number; role: string };
     return decoded;
   } catch {
     return null;
@@ -42,8 +43,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "Unauthorized", message: "Invalid token" });
     return;
   }
-  (req as any).userId = decoded.userId;
-  (req as any).userRole = decoded.role;
+  req.userId = decoded.userId;
+  req.userRole = decoded.role;
   next();
 }
 
@@ -75,8 +76,8 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    (req as any).userId = user.id;
-    (req as any).userRole = user.role;
+    req.userId = user.id;
+    req.userRole = user.role;
     next();
   } catch {
     res.status(500).json({ error: "Internal Server Error", message: "Auth check failed" });
@@ -111,8 +112,8 @@ export async function requireVendor(req: Request, res: Response, next: NextFunct
       return;
     }
 
-    (req as any).userId = user.id;
-    (req as any).userRole = user.role;
+    req.userId = user.id;
+    req.userRole = user.role;
     next();
   } catch {
     res.status(500).json({ error: "Internal Server Error", message: "Auth check failed" });
@@ -124,8 +125,8 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   if (token) {
     const decoded = verifyToken(token);
     if (decoded) {
-      (req as any).userId = decoded.userId;
-      (req as any).userRole = decoded.role;
+      req.userId = decoded.userId;
+      req.userRole = decoded.role;
     }
   }
   next();

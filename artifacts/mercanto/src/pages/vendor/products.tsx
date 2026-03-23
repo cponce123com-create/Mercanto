@@ -82,7 +82,7 @@ export default function VendorProducts() {
   };
 
   const onSubmit = (data: ProductFormData) => {
-    const payload = { ...data, images: productImages.map((url, i) => ({ url, sortOrder: i })) };
+    const payload = { ...data, images: productImages.map((url, i) => ({ url, publicId: "", sortOrder: i })) };
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload });
     } else {

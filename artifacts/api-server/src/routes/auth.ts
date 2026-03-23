@@ -3,8 +3,11 @@ import bcrypt from "bcryptjs";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { signToken, requireAuth } from "../lib/auth.js";
+import { authLimiter } from "../middlewares/rateLimiter.js";
 
 const router: IRouter = Router();
+
+router.use(authLimiter);
 
 router.post("/register", async (req, res) => {
   try {
@@ -71,7 +74,7 @@ router.post("/logout", (_req, res) => {
 
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (!user) {
       res.status(401).json({ error: "Unauthorized", message: "User not found" });
@@ -87,7 +90,7 @@ router.get("/me", requireAuth, async (req, res) => {
 
 router.put("/profile", requireAuth, async (req, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
     const { name, phone, district, avatarUrl } = req.body;
     const [updated] = await db.update(usersTable)
       .set({ name, phone, district, avatarUrl, updatedAt: new Date() })

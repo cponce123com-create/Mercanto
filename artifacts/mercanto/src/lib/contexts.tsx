@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     query: {
       retry: false,
       staleTime: 5 * 60 * 1000,
-    }
+    } as any
   });
 
   const queryClient = useQueryClient();

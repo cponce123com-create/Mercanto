@@ -37,7 +37,8 @@ router.get("/map", async (req, res) => {
       .limit(500);
 
     if (category) {
-      return res.json(stores.filter(s => s.categorySlug === category || s.categoryName?.toLowerCase() === category.toLowerCase()));
+      res.json(stores.filter(s => s.categorySlug === category || s.categoryName?.toLowerCase() === category.toLowerCase()));
+      return;
     }
 
     res.json(stores.map(s => ({
@@ -140,12 +141,13 @@ router.get("/", async (req, res) => {
 
     if (category) {
       const filtered = stores.filter(s => s.categorySlug === category);
-      return res.json({
+      res.json({
         stores: filtered.map(s => mapStore(s)),
         total: filtered.length,
         page,
         totalPages: 1,
       });
+      return;
     }
 
     res.json({
@@ -207,7 +209,7 @@ router.post("/", requireAuth, async (req, res) => {
 
 router.get("/:slug", optionalAuth, async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = String(req.params.slug);
     const userId = (req as any).userId;
     const userRole = (req as any).userRole;
 
@@ -264,7 +266,7 @@ router.put("/:slug", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const userRole = (req as any).userRole;
-    const { slug } = req.params;
+    const slug = String(req.params.slug);
     const [store] = await db.select().from(storesTable).where(eq(storesTable.slug, slug)).limit(1);
     if (!store) {
       res.status(404).json({ error: "Not Found", message: "Store not found" });
@@ -289,7 +291,7 @@ router.put("/:slug", requireAuth, async (req, res) => {
 
 router.post("/:slug/visit", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = String(req.params.slug);
     await db.update(storesTable)
       .set({ totalVisits: sql`${storesTable.totalVisits} + 1` })
       .where(eq(storesTable.slug, slug));
@@ -302,7 +304,7 @@ router.post("/:slug/visit", async (req, res) => {
 
 router.get("/:storeSlug/products", optionalAuth, async (req, res) => {
   try {
-    const { storeSlug } = req.params;
+    const storeSlug = String(req.params.storeSlug);
     const { category } = req.query as Record<string, string>;
     const [store] = await db.select({ id: storesTable.id, userId: storesTable.userId, status: storesTable.status }).from(storesTable).where(eq(storesTable.slug, storeSlug)).limit(1);
     if (!store) {
@@ -354,7 +356,7 @@ router.get("/:storeSlug/products", optionalAuth, async (req, res) => {
 
 router.get("/:storeSlug/reviews", async (req, res) => {
   try {
-    const { storeSlug } = req.params;
+    const storeSlug = String(req.params.storeSlug);
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.slug, storeSlug)).limit(1);
     if (!store) {
       res.status(404).json({ error: "Not Found", message: "Store not found" });
@@ -387,7 +389,7 @@ router.get("/:storeSlug/reviews", async (req, res) => {
 router.post("/:storeSlug/reviews", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const { storeSlug } = req.params;
+    const storeSlug = String(req.params.storeSlug);
     const { rating, comment } = req.body;
     if (!rating || rating < 1 || rating > 5) {
       res.status(400).json({ error: "Bad Request", message: "rating must be between 1 and 5" });

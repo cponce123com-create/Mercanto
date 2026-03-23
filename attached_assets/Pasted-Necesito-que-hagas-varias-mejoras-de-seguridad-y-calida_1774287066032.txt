@@ -1,0 +1,54 @@
+Necesito que hagas varias mejoras de seguridad y calidad al proyecto. Lee todo antes de empezar y hazlo en orden:
+
+## 1. Eliminar JWT secret hardcodeado
+En `artifacts/api-server/src/lib/auth.ts`, línea 4:
+- Reemplaza: `const JWT_SECRET = process.env.JWT_SECRET || "mercanto-dev-secret-2024";`
+- Por esto:
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error("JWT_SECRET environment variable is required");
+
+## 2. Agregar rate limiting en rutas de autenticación
+- Instala `express-rate-limit` en `artifacts/api-server`
+- Crea un middleware en `artifacts/api-server/src/middlewares/rateLimiter.ts` con dos limiters:
+  - `authLimiter`: máximo 10 requests por IP cada 15 minutos, mensaje de error en español
+  - `apiLimiter`: máximo 100 requests por IP cada 15 minutos
+- Aplica `authLimiter` a todas las rutas en `artifacts/api-server/src/routes/auth.ts`
+- Aplica `apiLimiter` globalmente en `artifacts/api-server/src/app.ts`
+
+## 3. Validar uploads de imágenes
+En `artifacts/api-server/src/routes/upload.ts`:
+- Antes de enviar a Cloudinary, valida que:
+  - El tipo MIME sea solo: `image/jpeg`, `image/png`, `image/webp`, `image/gif`
+  - El tamaño máximo sea 5MB
+- Si no cumple, responde con status 400 y mensaje claro en español
+
+## 4. Agregar índices en la base de datos
+En `lib/db/src/schema/index.ts`, agrega índices usando `index()` de drizzle-orm/pg-core en:
+- `storesTable`: índices en `slug`, `status`, `district`, `userId`
+- `productsTable`: índices en `slug`, `status`, `storeId`
+- `usersTable`: índice en `email`
+
+## 5. Tipar correctamente el Request de Express
+- Crea el archivo `artifacts/api-server/src/types/express.d.ts` que extienda `Express.Request` con `userId: number` y `userRole: string`
+- En `artifacts/api-server/src/lib/auth.ts` reemplaza todos los `(req as any).userId` y `(req as any).userRole` por los tipos correctos
+
+## 6. Optimizar imágenes estáticas
+- Convierte `artifacts/mercanto/public/images/hero-marketplace.png` (1.7MB) a WebP manteniendo buena calidad
+- Convierte `artifacts/mercanto/public/images/map-placeholder.png` (1.4MB) a WebP
+- Convierte `artifacts/mercanto/public/images/store-placeholder.png` a WebP
+- Actualiza las referencias en el código frontend donde se usen estas imágenes
+
+## 7. Mejorar el health check
+En `artifacts/api-server/src/routes/health.ts`:
+- Agrega verificación real de la conexión a la base de datos (ejecuta un `SELECT 1`)
+- Que responda con status 200 si todo OK, o 503 si la DB no responde
+- Incluye en la respuesta: `{ status, timestamp, database, uptime }`
+
+## 8. Agregar constraint único en reviews
+En `lib/db/src/schema/index.ts`:
+- En `reviewsTable`, agrega un unique constraint compuesto en `(storeId, userId)` para que un usuario no pueda dejar más de una reseña por tienda
+
+## IMPORTANTE al terminar:
+- Corre `pnpm run typecheck` desde la raíz y asegúrate de que no haya errores de TypeScript
+- Asegúrate de que el servidor de desarrollo sigue corriendo sin errores
+- No cambies ninguna funcionalidad existente, solo estas mejoras

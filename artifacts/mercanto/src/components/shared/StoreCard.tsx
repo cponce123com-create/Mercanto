@@ -1,6 +1,8 @@
 import { Link } from "wouter";
-import { Store as StoreType } from "@workspace/api-client-react";
+import { Store as StoreType, StoreDetail } from "@workspace/api-client-react";
 import { MapPin, MessageCircle, Star } from "lucide-react";
+
+type StoreCardStore = StoreType & Partial<Pick<StoreDetail, "averageRating" | "reviewCount">>;
 
 const CATEGORIES_WITH_ICONS: Record<string, string> = {
   "Abarrotes y Bodega": "🛒",
@@ -26,7 +28,7 @@ const CATEGORIES_WITH_ICONS: Record<string, string> = {
 };
 
 interface StoreCardProps {
-  store: StoreType;
+  store: StoreCardStore;
 }
 
 export function StoreCard({ store }: StoreCardProps) {

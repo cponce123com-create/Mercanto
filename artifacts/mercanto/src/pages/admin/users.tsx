@@ -164,7 +164,7 @@ export default function AdminUsers() {
                       <div className="flex items-center justify-end gap-2">
                         <Select
                           value={u.role}
-                          onValueChange={(role) => roleMutation.mutate({ id: u.id, data: { role } })}
+                          onValueChange={(role) => roleMutation.mutate({ id: u.id, data: { role: role as "user" | "vendor" | "admin" } })}
                           disabled={roleMutation.isPending || u.role === 'admin'}
                         >
                           <SelectTrigger className="w-[110px] h-8 text-xs bg-white">

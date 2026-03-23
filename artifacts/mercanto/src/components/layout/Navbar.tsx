@@ -36,7 +36,7 @@ export function Navbar() {
 
   const { data: searchResults } = useGlobalSearch(
     { q: debouncedQuery, type: "all" },
-    { query: { enabled: debouncedQuery.length >= 2 } }
+    { query: { enabled: debouncedQuery.length >= 2 } as any }
   );
 
   const stores = searchResults?.stores?.slice(0, 5) ?? [];

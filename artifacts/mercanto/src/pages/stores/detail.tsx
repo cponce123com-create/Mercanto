@@ -295,7 +295,7 @@ function ReviewsSection({ storeSlug }: { storeSlug: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="font-semibold text-sm text-[#1E293B]">{r.user?.name || "Usuario"}</span>
-                    <span className="text-xs text-gray-400">{timeAgo(r.createdAt)}</span>
+                    <span className="text-xs text-gray-400">{r.createdAt ? timeAgo(r.createdAt) : ""}</span>
                   </div>
                   <div className="mt-0.5 mb-2">
                     <Stars rating={r.rating} />
@@ -327,7 +327,7 @@ export default function StoreDetail() {
   const slug = params?.slug || "";
 
   const { data: store, isLoading } = useGetStoreBySlug(slug, {
-    query: { enabled: !!slug, retry: false },
+    query: { enabled: !!slug, retry: false } as any,
   });
 
   const visitMutation = useIncrementStoreVisit();
@@ -426,7 +426,7 @@ export default function StoreDetail() {
                     <Phone className="w-5 h-5" /> Contactar por WhatsApp
                   </Button>
                   {store.lat && store.lng && (
-                    <Link href={`/map?district=${encodeURIComponent(store.district)}&storeId=${store.id}`}>
+                    <Link href={`/map?district=${encodeURIComponent(store.district || "")}&storeId=${store.id}`}>
                       <Button
                         variant="outline"
                         size="lg"

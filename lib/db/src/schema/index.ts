@@ -6,6 +6,8 @@ import {
   boolean,
   timestamp,
   numeric,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -23,7 +25,9 @@ export const usersTable = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   lastSignedIn: timestamp("last_signed_in").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("users_email_idx").on(table.email),
+]);
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, updatedAt: true, lastSignedIn: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -69,7 +73,12 @@ export const storesTable = pgTable("stores", {
   totalVisits: integer("total_visits").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("stores_slug_idx").on(table.slug),
+  index("stores_status_idx").on(table.status),
+  index("stores_district_idx").on(table.district),
+  index("stores_user_id_idx").on(table.userId),
+]);
 
 export const insertStoreSchema = createInsertSchema(storesTable).omit({ id: true, createdAt: true, updatedAt: true, totalVisits: true });
 export type InsertStore = z.infer<typeof insertStoreSchema>;
@@ -90,7 +99,11 @@ export const productsTable = pgTable("products", {
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("products_slug_idx").on(table.slug),
+  index("products_status_idx").on(table.status),
+  index("products_store_id_idx").on(table.storeId),
+]);
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
@@ -146,7 +159,9 @@ export const reviewsTable = pgTable("reviews", {
   comment: text("comment"),
   isVisible: boolean("is_visible").default(true),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("reviews_store_user_idx").on(table.storeId, table.userId),
+]);
 
 export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });
 export type InsertReview = z.infer<typeof insertReviewSchema>;

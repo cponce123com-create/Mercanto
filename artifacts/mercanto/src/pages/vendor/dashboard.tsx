@@ -27,12 +27,12 @@ export default function VendorDashboard() {
 
   const handleLogoUpload = (result: CloudinaryUploadResult | null) => {
     if (!result || !store) return;
-    updateMutation.mutate({ data: { logoUrl: result.url } as any });
+    updateMutation.mutate({ slug: store.slug, data: { logoUrl: result.url } as any });
   };
 
   const handleBannerUpload = (result: CloudinaryUploadResult | null) => {
     if (!result || !store) return;
-    updateMutation.mutate({ data: { bannerUrl: result.url } as any });
+    updateMutation.mutate({ slug: store.slug, data: { bannerUrl: result.url } as any });
   };
 
   if (storeLoading || productsLoading) {

@@ -30,7 +30,7 @@ export default function SearchPage() {
 
   const { data, isLoading } = useGlobalSearch(
     { q: debouncedQ, district: district !== 'all' ? district : undefined, type: "all" },
-    { query: { enabled: debouncedQ.length > 1 } }
+    { query: { enabled: debouncedQ.length > 1 } as any }
   );
 
   return (
