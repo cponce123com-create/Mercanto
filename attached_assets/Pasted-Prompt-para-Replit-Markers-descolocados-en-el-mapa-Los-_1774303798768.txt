@@ -1,0 +1,81 @@
+Prompt para Replit — Markers descolocados en el mapa:
+Los markers del mapa aparecen apilados en una línea vertical en el centro del Perú, completamente fuera de su ubicación real. Esto indica que las coordenadas están invertidas (se está pasando lat donde debería ir lng y viceversa) o que los valores están mal parseados. Necesito que investigues y corrijas el problema.
+1. Diagnóstico — verifica los valores reales en la DB
+Corre este script para ver las coordenadas exactas que tienen las tiendas activas:
+bashnpx tsx -e "
+import { db, storesTable } from '@workspace/db';
+import { eq, isNotNull } from 'drizzle-orm';
+const stores = await db.select({ id: storesTable.id, name: storesTable.name, lat: storesTable.lat, lng: storesTable.lng, district: storesTable.district })
+  .from(storesTable)
+  .where(eq(storesTable.status, 'active'))
+  .limit(5);
+console.table(stores);
+process.exit(0);
+" 2>/dev/null || cd scripts && npx tsx src/check-db.ts
+Mira los valores de lat y lng. Para Perú los valores correctos deben ser:
+
+lat entre -18 y -0 (negativo, eje vertical)
+lng entre -81 y -68 (negativo, eje horizontal)
+
+Si ves que lat tiene valores como -75 y lng tiene valores como -11, están invertidos. Si ves valores como -11.1297 y -75.3500 en las columnas correctas, el problema está en cómo se pasan a Mapbox.
+2. Corregir coordenadas invertidas en el componente StoreMap
+En artifacts/mercanto/src/components/shared/StoreMap.tsx o donde estén los markers, busca la línea donde se crea el marker y verifica el orden. Mapbox usa [lng, lat] — el orden es primero longitud, luego latitud — al revés de lo intuitivo:
+ts// INCORRECTO — causa markers descolocados:
+.setLngLat([store.lat, store.lng])
+
+// CORRECTO — longitud primero, latitud segundo:
+.setLngLat([lng, lat])
+Verifica que en TODOS los lugares donde se usa setLngLat, flyTo, fitBounds y center el orden sea siempre [lng, lat].
+Revisa también el fitBounds:
+ts// CORRECTO:
+bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]);
+
+// INCORRECTO:
+bounds.extend([parseFloat(String(s.lat)), parseFloat(String(s.lng))]);
+3. Corregir coordenadas invertidas en la DB (si el problema es ese)
+Si el diagnóstico del paso 1 muestra que los valores de lat y lng están en las columnas equivocadas, corrígelos con este script. Primero verifica con un SELECT antes de actualizar:
+bashnpx tsx -e "
+import { db, storesTable } from '@workspace/db';
+import { isNotNull, sql } from 'drizzle-orm';
+await db.execute(sql\`
+  UPDATE stores
+  SET lat = lng, lng = lat
+  WHERE lat IS NOT NULL AND lng IS NOT NULL
+  AND (lat::numeric < -60 OR lat::numeric > -5)
+\`);
+console.log('Coordenadas corregidas');
+process.exit(0);
+"
+Este query solo actualiza las filas donde lat tiene valores fuera del rango esperado para Perú (entre -18 y -0), lo cual indica que están invertidas. Es seguro de correr.
+4. Corregir que los markers no escalan con el zoom
+Los markers de Mapbox GL JS son elementos HTML normales — no escalan automáticamente con el zoom del mapa como sí lo hacen los markers de Leaflet. Esto es el comportamiento esperado de Mapbox, pero visualmente se ve mal cuando haces zoom out. Para que los markers se oculten cuando el zoom es muy bajo y sean más pequeños en zoom intermedio, agrega esta lógica después de crear el mapa:
+tsmap.current.on("zoom", () => {
+  const currentZoom = map.current!.getZoom();
+  markers.current.forEach(marker => {
+    const el = marker.getElement();
+    const inner = el.querySelector("div") as HTMLElement;
+    if (!inner) return;
+    if (currentZoom < 8) {
+      el.style.display = "none";
+    } else if (currentZoom < 11) {
+      el.style.display = "block";
+      inner.style.transform = "scale(0.6)";
+      inner.style.transformOrigin = "bottom center";
+    } else if (currentZoom < 13) {
+      el.style.display = "block";
+      inner.style.transform = "scale(0.8)";
+      inner.style.transformOrigin = "bottom center";
+    } else {
+      el.style.display = "block";
+      inner.style.transform = "scale(1)";
+    }
+  });
+});
+Esto oculta los markers cuando el zoom es menor a 8 (vista de país completo donde no tiene sentido mostrarlos), los achica en zoom intermedio y los muestra a tamaño normal cuando el usuario está cerca.
+5. Verificación final
+Después de aplicar los fixes:
+
+Haz zoom out hasta ver todo el Perú — los markers deben desaparecer o achicarse
+Haz zoom in a San Ramón — los markers deben aparecer en las ubicaciones correctas de la ciudad
+Abre el popup de una tienda y verifica que el nombre y el link son correctos
+Cambia el distrito desde el navbar y verifica que el mapa vuela al nuevo distrito correctamente

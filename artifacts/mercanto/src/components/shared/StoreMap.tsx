@@ -26,63 +26,78 @@ interface StoreMapProps {
   className?: string;
 }
 
-const SAN_RAMON_CENTER: [number, number] = [-11.1297, -75.3500];
+const SAN_RAMON: [number, number] = [-75.3500, -11.1297]; // [lng, lat] — Mapbox format
 
 function buildMarkerEl(store: StoreMapItem, isHighlighted: boolean): HTMLElement {
   const el = document.createElement("div");
-  el.className = "store-marker";
-  el.style.cssText = "cursor:pointer;position:relative;width:44px;height:52px;";
-
-  const accentColor = isHighlighted ? "#EF4444" : "#2563EB";
+  const color = isHighlighted ? "#EF4444" : "#2563EB";
+  const icon = store.category?.icon || "🏪";
 
   if (store.logoUrl) {
-    const iconFallback = store.category?.icon || "🏪";
     el.innerHTML = `
       <div style="
-        width:42px;height:42px;border-radius:50%;
-        border:2.5px solid ${accentColor};
-        box-shadow:0 2px 10px rgba(0,0,0,0.22);
+        width:40px;height:40px;border-radius:50%;
+        border:3px solid ${color};
+        box-shadow:0 2px 10px rgba(0,0,0,0.25);
         overflow:hidden;background:#fff;
         display:flex;align-items:center;justify-content:center;
+        cursor:pointer;
         transition:transform 0.15s ease;
       ">
         <img
           src="${store.logoUrl}"
           alt="${store.name}"
-          style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-          onerror="this.parentElement.innerHTML='<span style=\\"font-size:18px\\">${iconFallback}</span>'"
+          style="width:100%;height:100%;object-fit:cover;"
+          onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\"font-size:18px;line-height:40px\\">${icon}</span>'"
         />
-      </div>
-      <div style="
-        position:absolute;bottom:0;left:50%;transform:translateX(-50%);
-        width:0;height:0;
-        border-left:6px solid transparent;
-        border-right:6px solid transparent;
-        border-top:8px solid ${accentColor};
-      "></div>
-    `;
+      </div>`;
   } else {
     el.innerHTML = `
       <div style="
-        background:${accentColor};color:#fff;border-radius:50%;
-        width:42px;height:42px;
+        background:${color};color:#fff;border-radius:50%;
+        width:40px;height:40px;
         display:flex;align-items:center;justify-content:center;
         font-size:18px;
-        box-shadow:0 2px 10px rgba(0,0,0,0.22);
-        border:2.5px solid #fff;
+        box-shadow:0 2px 10px rgba(0,0,0,0.25);
+        border:3px solid rgba(255,255,255,0.9);
+        cursor:pointer;
         transition:transform 0.15s ease;
-      ">${store.category?.icon || "🏪"}</div>
-      <div style="
-        position:absolute;bottom:0;left:50%;transform:translateX(-50%);
-        width:0;height:0;
-        border-left:6px solid transparent;
-        border-right:6px solid transparent;
-        border-top:8px solid ${accentColor};
-      "></div>
-    `;
+      ">${icon}</div>`;
   }
 
+  el.style.cssText = "cursor:pointer;";
+  el.addEventListener("mouseenter", () => {
+    const inner = el.querySelector("div") as HTMLElement;
+    if (inner) inner.style.transform = "scale(1.15)";
+  });
+  el.addEventListener("mouseleave", () => {
+    const inner = el.querySelector("div") as HTMLElement;
+    if (inner) inner.style.transform = "scale(1)";
+  });
+
   return el;
+}
+
+function applyZoomScale(markers: Map<number, mapboxgl.Marker>, zoom: number) {
+  markers.forEach(marker => {
+    const el = marker.getElement();
+    const inner = el.querySelector("div") as HTMLElement;
+    if (!inner) return;
+    if (zoom < 8) {
+      el.style.display = "none";
+    } else if (zoom < 11) {
+      el.style.display = "";
+      inner.style.transform = "scale(0.55)";
+      inner.style.transformOrigin = "center center";
+    } else if (zoom < 13) {
+      el.style.display = "";
+      inner.style.transform = "scale(0.8)";
+      inner.style.transformOrigin = "center center";
+    } else {
+      el.style.display = "";
+      inner.style.transform = "scale(1)";
+    }
+  });
 }
 
 export function StoreMap({
@@ -109,9 +124,10 @@ export function StoreMap({
       return;
     }
 
+    // center prop is [lat, lng] (conventional), convert to Mapbox [lng, lat]
     const mapCenter: [number, number] = center
       ? [center[1], center[0]]
-      : [SAN_RAMON_CENTER[1], SAN_RAMON_CENTER[0]];
+      : SAN_RAMON;
 
     const timer = setTimeout(() => {
       if (!containerRef.current || mapRef.current) return;
@@ -132,6 +148,10 @@ export function StoreMap({
         }),
         "top-right",
       );
+
+      map.on("zoom", () => {
+        applyZoomScale(markersRef.current, map.getZoom());
+      });
 
       map.once("load", () => {
         setMapReady(true);
@@ -166,13 +186,13 @@ export function StoreMap({
     });
 
     validStores.forEach(store => {
-      const lat = parseFloat(String(store.lat));
-      const lng = parseFloat(String(store.lng));
+      const lat = parseFloat(String(store.lat)); // Peru: -18 to 0
+      const lng = parseFloat(String(store.lng)); // Peru: -81 to -68
       const isHighlighted = store.id === highlightedStoreId;
 
       const el = buildMarkerEl(store, isHighlighted);
 
-      const popup = new mapboxgl.Popup({ offset: 28, closeButton: false, maxWidth: "220px" })
+      const popup = new mapboxgl.Popup({ offset: 20, closeButton: false, maxWidth: "220px" })
         .setHTML(`
           <div style="font-family:sans-serif;padding:4px">
             <p style="font-weight:600;font-size:14px;margin:0 0 2px;color:#1e293b">${store.name}</p>
@@ -184,7 +204,8 @@ export function StoreMap({
           </div>
         `);
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
+      // Mapbox always wants [lng, lat] — longitude first
+      const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map);
@@ -200,6 +221,9 @@ export function StoreMap({
       markersRef.current.set(store.id, marker);
     });
 
+    // Apply current zoom scale to newly added markers
+    applyZoomScale(markersRef.current, map.getZoom());
+
     /* ── Fit bounds / fly to ── */
     if (highlightedStoreId) {
       const hs = validStores.find(s => s.id === highlightedStoreId);
@@ -209,6 +233,7 @@ export function StoreMap({
     } else if (validStores.length > 1) {
       const bounds = new mapboxgl.LngLatBounds();
       validStores.forEach(s => {
+        // extend always takes [lng, lat]
         bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]);
       });
       map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
