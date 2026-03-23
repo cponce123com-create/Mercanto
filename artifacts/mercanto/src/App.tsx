@@ -1,8 +1,9 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, DistrictProvider } from "@/lib/contexts";
+import { BottomNav } from "@/components/layout/BottomNav";
 import NotFound from "@/pages/not-found";
 
 // Pages
@@ -33,32 +34,44 @@ const queryClient = new QueryClient({
   },
 });
 
+const HIDE_BOTTOM_NAV = ["/admin", "/vendor", "/map", "/login", "/register"];
+
+function GlobalBottomNav() {
+  const [location] = useLocation();
+  const hide = HIDE_BOTTOM_NAV.some(p => location === p || location.startsWith(p + "/"));
+  if (hide) return null;
+  return <BottomNav />;
+}
+
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/stores" component={StoresDirectory} />
-      <Route path="/stores/:slug" component={StoreDetail} />
-      <Route path="/map" component={MapPage} />
-      <Route path="/search" component={SearchPage} />
-      
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/create-store" component={CreateStore} />
-      
-      <Route path="/vendor" component={VendorDashboard} />
-      <Route path="/vendor/products" component={VendorProducts} />
-      <Route path="/vendor/store" component={VendorStoreSettings} />
-      
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/admin/stores" component={AdminStores} />
-      <Route path="/admin/stores/:id" component={AdminStoreDetail} />
-      <Route path="/admin/users" component={AdminUsers} />
-      <Route path="/admin/categories" component={AdminCategories} />
-      <Route path="/admin/banners" component={AdminBanners} />
-      
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/stores" component={StoresDirectory} />
+        <Route path="/stores/:slug" component={StoreDetail} />
+        <Route path="/map" component={MapPage} />
+        <Route path="/search" component={SearchPage} />
+
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
+        <Route path="/create-store" component={CreateStore} />
+
+        <Route path="/vendor" component={VendorDashboard} />
+        <Route path="/vendor/products" component={VendorProducts} />
+        <Route path="/vendor/store" component={VendorStoreSettings} />
+
+        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/admin/stores" component={AdminStores} />
+        <Route path="/admin/stores/:id" component={AdminStoreDetail} />
+        <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/categories" component={AdminCategories} />
+        <Route path="/admin/banners" component={AdminBanners} />
+
+        <Route component={NotFound} />
+      </Switch>
+      <GlobalBottomNav />
+    </>
   );
 }
 

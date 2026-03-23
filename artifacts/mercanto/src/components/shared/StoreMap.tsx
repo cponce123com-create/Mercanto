@@ -98,8 +98,12 @@ export function StoreMap({
       mapRef.current = map;
       readyRef.current = true;
 
-      // Trigger initial marker render
-      renderMarkers(L, map, stores, highlightedStoreId, center);
+      // Force Leaflet to recalculate size after layout settles (fixes blank map on mobile)
+      requestAnimationFrame(() => map.invalidateSize());
+      setTimeout(() => {
+        map.invalidateSize();
+        renderMarkers(L, map, stores, highlightedStoreId, center);
+      }, 150);
     };
 
     initMap();
@@ -181,5 +185,9 @@ export function StoreMap({
     }
   }
 
-  return <div ref={containerRef} className={className} />;
+  return (
+    <div className="relative w-full h-full flex-1">
+      <div ref={containerRef} className="absolute inset-0" />
+    </div>
+  );
 }

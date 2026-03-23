@@ -3,7 +3,7 @@ import { Link } from "wouter";
 
 export function Footer() {
   return (
-    <footer className="bg-[#1E293B] text-gray-400 pt-12 pb-6 mt-4">
+    <footer className="bg-[#1E293B] text-gray-400 pt-12 pb-[76px] md:pb-6 mt-4">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="space-y-3 md:col-span-1">

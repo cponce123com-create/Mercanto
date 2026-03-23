@@ -54,7 +54,7 @@ export default function StoresDirectory() {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <div className="bg-white border-b sticky top-16 z-40">
+      <div className="bg-white border-b sticky top-14 md:top-16 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:max-w-md">
@@ -111,7 +111,7 @@ export default function StoresDirectory() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-display font-bold">Directorio de Comercios</h1>
+            <h1 className="text-xl sm:text-3xl font-display font-bold">Directorio de Comercios</h1>
             <p className="text-muted-foreground mt-2">
               {isLoading ? (
                 "Cargando tiendas..."
@@ -137,7 +137,7 @@ export default function StoresDirectory() {
           </div>
         ) : stores.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
