@@ -9,6 +9,7 @@ import offersRouter from "./offers.js";
 import searchRouter from "./search.js";
 import reviewsRouter from "./reviews.js";
 import adminRouter from "./admin.js";
+import uploadRouter from "./upload.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/products/offers", offersRouter);
 router.use("/search", searchRouter);
 router.use("/reviews", reviewsRouter);
 router.use("/admin", adminRouter);
+router.use("/upload", uploadRouter);
 
 export default router;
