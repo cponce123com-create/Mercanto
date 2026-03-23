@@ -16,6 +16,24 @@ export const DISTRICTS = [
   "Chilca"
 ];
 
+export const DISTRICT_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  "San Ramón":          { lat: -11.1297, lng: -75.3500, zoom: 14 },
+  "La Merced":          { lat: -11.0566, lng: -75.3212, zoom: 14 },
+  "Pichanaqui":         { lat: -10.9333, lng: -75.0167, zoom: 14 },
+  "San Luis de Shuaro": { lat: -10.9833, lng: -75.3167, zoom: 13 },
+  "Vitoc":              { lat: -11.0833, lng: -75.2833, zoom: 13 },
+  "Perené":             { lat: -10.9667, lng: -75.0500, zoom: 13 },
+  "Satipo":             { lat: -11.2567, lng: -74.6381, zoom: 13 },
+  "Mazamari":           { lat: -11.3233, lng: -74.5300, zoom: 13 },
+  "San Martín de Pangoa": { lat: -11.4167, lng: -74.4667, zoom: 13 },
+  "Río Negro":          { lat: -11.3767, lng: -74.5483, zoom: 13 },
+  "Tarma":              { lat: -11.4189, lng: -75.6914, zoom: 13 },
+  "Jauja":              { lat: -11.7764, lng: -75.4972, zoom: 13 },
+  "Huancayo":           { lat: -12.0653, lng: -75.2197, zoom: 13 },
+  "El Tambo":           { lat: -12.0383, lng: -75.2197, zoom: 14 },
+  "Chilca":             { lat: -12.5278, lng: -76.2572, zoom: 13 },
+};
+
 export const CATEGORIES_WITH_ICONS: Record<string, string> = {
   "Frutas y Verduras": "🍎",
   "Café y Cacao": "☕",

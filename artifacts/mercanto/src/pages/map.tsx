@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import mapboxgl from "mapbox-gl";
 import { Navbar } from "@/components/layout/Navbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { useListStoresForMap } from "@workspace/api-client-react";
 import { useDistrict } from "@/lib/contexts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DISTRICTS } from "@/lib/constants";
+import { DISTRICTS, DISTRICT_CENTERS } from "@/lib/constants";
 import { Link, useSearch } from "wouter";
 import { MapPin, Store, Loader2, List, Map as MapIcon } from "lucide-react";
 import { StoreMap } from "@/components/shared/StoreMap";
@@ -21,6 +22,16 @@ export default function MapPage() {
   const [selectedStore, setSelectedStore] = useState<number | null>(highlightedId ?? null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const dc = district && district !== "all" ? DISTRICT_CENTERS[district] : null;
+    if (dc) {
+      map.flyTo({ center: [dc.lng, dc.lat], zoom: dc.zoom, duration: 1200, essential: true });
+    }
+  }, [district]);
 
   const { data: stores, isLoading } = useListStoresForMap({
     district: district !== 'all' ? district : undefined,
@@ -174,6 +185,7 @@ export default function MapPage() {
           stores={filteredStores as any}
           highlightedStoreId={selectedStore ?? highlightedId}
           onStoreClick={(s) => setSelectedStore(s.id)}
+          onMapReady={(m) => { mapInstanceRef.current = m; }}
           className="w-full h-full flex-1"
         />
       )}

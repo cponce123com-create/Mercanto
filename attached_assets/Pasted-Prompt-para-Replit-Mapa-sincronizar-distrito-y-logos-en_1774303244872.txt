@@ -1,0 +1,130 @@
+Prompt para Replit — Mapa: sincronizar distrito y logos en markers:
+Hay dos mejoras que hacer en el mapa de Mapbox:
+
+MEJORA 1 — El mapa debe recentrarse cuando cambia el distrito
+Actualmente el mapa se queda centrado en San Ramón aunque el usuario cambie de distrito. Necesito que cuando cambie el distrito activo, el mapa vuele automáticamente al centro del nuevo distrito y muestre solo sus tiendas.
+Primero, en artifacts/mercanto/src/lib/constants.ts (o donde esté definida la lista de distritos DISTRICTS), agrega las coordenadas centrales de cada distrito. Si el archivo no tiene coordenadas, agrégalas así:
+tsexport const DISTRICT_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  "San Ramón": { lat: -11.1297, lng: -75.3500, zoom: 14 },
+  "La Merced": { lat: -11.0566, lng: -75.3212, zoom: 14 },
+  "Vitoc": { lat: -11.0833, lng: -75.2833, zoom: 13 },
+  "San Luis de Shuaro": { lat: -10.9833, lng: -75.3167, zoom: 13 },
+  "Pichanaqui": { lat: -10.9333, lng: -75.0167, zoom: 13 },
+  "Perené": { lat: -10.9667, lng: -75.0500, zoom: 13 },
+  "Chanchamayo": { lat: -11.0566, lng: -75.3212, zoom: 12 },
+  "El Tambo": { lat: -12.0653, lng: -75.2197, zoom: 13 },
+  "Huancayo": { lat: -12.0653, lng: -75.2197, zoom: 13 },
+  "Lima": { lat: -12.0464, lng: -77.0428, zoom: 12 },
+};
+Agrega todos los distritos que tenga tu lista DISTRICTS. Si hay alguno que no conoces las coordenadas, busca en Google Maps el centro aproximado.
+Luego en la página del mapa (src/pages/map.tsx), importa useDistrict y DISTRICT_CENTERS y agrega un useEffect que reaccione al cambio de distrito:
+tsimport { useDistrict } from "@/lib/contexts";
+import { DISTRICT_CENTERS } from "@/lib/constants";
+
+const { district } = useDistrict();
+
+// Ref al mapa para poder llamar flyTo desde fuera del componente StoreMap
+const mapRef = useRef<mapboxgl.Map | null>(null);
+
+useEffect(() => {
+  if (!district || !mapRef.current) return;
+  const center = DISTRICT_CENTERS[district];
+  if (!center) return;
+  mapRef.current.flyTo({
+    center: [center.lng, center.lat],
+    zoom: center.zoom,
+    duration: 1200,
+    essential: true,
+  });
+}, [district]);
+Para que esto funcione, el componente StoreMap necesita exponer su instancia de mapa hacia afuera. Modifica StoreMap para aceptar un prop opcional onMapReady:
+tsinterface StoreMapProps {
+  // ... props existentes
+  onMapReady?: (map: mapboxgl.Map) => void;
+}
+Y dentro del useEffect de inicialización, justo después de crear el new mapboxgl.Map(...), agrega:
+tsmap.current.once("load", () => {
+  onMapReady?.(map.current!);
+});
+En la página del mapa, pasa el callback:
+tsx<StoreMap
+  stores={stores}
+  onMapReady={(m) => { mapRef.current = m; }}
+/>
+Además, cuando cambia el distrito también deben recargarse las tiendas del mapa. Verifica que el query que obtiene las tiendas incluye district en su queryKey y en los parámetros del fetch, para que React Query lo refetch automáticamente al cambiar:
+tsconst { data: stores } = useQuery({
+  queryKey: ["/api/stores/map", district],
+  queryFn: async () => {
+    const params = new URLSearchParams();
+    if (district) params.set("district", district);
+    const res = await fetch(`${import.meta.env.BASE_URL}api/stores/map?${params}`);
+    return res.json();
+  },
+});
+
+MEJORA 2 — Mostrar el logo de la tienda en el marker del mapa
+En lugar del ícono de categoría genérico, el marker debe mostrar el logo real de la tienda si está disponible, con fallback al ícono de categoría si no tiene logo.
+En el useEffect que crea los markers dentro de StoreMap, reemplaza el innerHTML del elemento del marker por esta lógica:
+tsconst el = document.createElement("div");
+el.style.cssText = "cursor:pointer;";
+
+if (store.logoUrl) {
+  el.innerHTML = `
+    <div style="
+      width:42px;height:42px;border-radius:50%;
+      border:2.5px solid #2563EB;
+      box-shadow:0 2px 10px rgba(0,0,0,0.2);
+      overflow:hidden;background:#fff;
+      display:flex;align-items:center;justify-content:center;
+    ">
+      <img
+        src="${store.logoUrl}"
+        alt="${store.name}"
+        style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+        onerror="this.parentElement.innerHTML='<span style=\\"font-size:18px\\">${store.category?.icon || "🏪"}</span>'"
+      />
+    </div>
+    <div style="
+      position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+      width:0;height:0;
+      border-left:6px solid transparent;
+      border-right:6px solid transparent;
+      border-top:8px solid #2563EB;
+    "></div>
+  `;
+} else {
+  el.innerHTML = `
+    <div style="
+      background:#2563EB;color:#fff;border-radius:50%;
+      width:42px;height:42px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.2);
+      border:2.5px solid #fff;
+    ">${store.category?.icon || "🏪"}</div>
+    <div style="
+      position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+      width:0;height:0;
+      border-left:6px solid transparent;
+      border-right:6px solid transparent;
+      border-top:8px solid #2563EB;
+    "></div>
+  `;
+}
+
+el.style.position = "relative";
+el.style.width = "42px";
+el.style.height = "48px";
+Esto genera un marker circular con el logo de la tienda y una pequeña punta triangular abajo como un pin de mapa real. Si la imagen falla al cargar, el onerror muestra el ícono de categoría como fallback.
+Agrega también este CSS al archivo global para el efecto hover:
+css.mapboxgl-marker:hover > div > div:first-child {
+  transform: scale(1.12);
+  transition: transform 0.15s ease;
+}
+
+VERIFICACIÓN
+
+Cambia el distrito desde el selector del navbar y verifica que el mapa vuela suavemente al nuevo distrito y los markers se actualizan.
+Verifica que las tiendas con logo muestran su imagen en el marker y las que no tienen logo muestran el ícono de categoría.
+Verifica que al hacer click en cualquier marker sigue abriendo el popup correctamente.
+Corre pnpm typecheck para verificar que no hay errores de TypeScript.

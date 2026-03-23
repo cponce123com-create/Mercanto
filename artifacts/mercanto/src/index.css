@@ -151,7 +151,8 @@
 
 /* Mapbox store markers */
 .store-marker { cursor: pointer; }
-.store-marker:hover > div { transform: scale(1.15); transition: transform 0.15s ease; }
+.store-marker:hover > div:first-child { transform: scale(1.12); transition: transform 0.15s ease; }
+.mapboxgl-marker:hover > .store-marker > div:first-child { transform: scale(1.12); transition: transform 0.15s ease; }
 .mapboxgl-popup-content {
   border-radius: 10px !important;
   padding: 10px 12px !important;

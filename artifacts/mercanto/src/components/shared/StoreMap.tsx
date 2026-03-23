@@ -22,10 +22,68 @@ interface StoreMapProps {
   zoom?: number;
   highlightedStoreId?: number;
   onStoreClick?: (store: StoreMapItem) => void;
+  onMapReady?: (map: mapboxgl.Map) => void;
   className?: string;
 }
 
 const SAN_RAMON_CENTER: [number, number] = [-11.1297, -75.3500];
+
+function buildMarkerEl(store: StoreMapItem, isHighlighted: boolean): HTMLElement {
+  const el = document.createElement("div");
+  el.className = "store-marker";
+  el.style.cssText = "cursor:pointer;position:relative;width:44px;height:52px;";
+
+  const accentColor = isHighlighted ? "#EF4444" : "#2563EB";
+
+  if (store.logoUrl) {
+    const iconFallback = store.category?.icon || "🏪";
+    el.innerHTML = `
+      <div style="
+        width:42px;height:42px;border-radius:50%;
+        border:2.5px solid ${accentColor};
+        box-shadow:0 2px 10px rgba(0,0,0,0.22);
+        overflow:hidden;background:#fff;
+        display:flex;align-items:center;justify-content:center;
+        transition:transform 0.15s ease;
+      ">
+        <img
+          src="${store.logoUrl}"
+          alt="${store.name}"
+          style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+          onerror="this.parentElement.innerHTML='<span style=\\"font-size:18px\\">${iconFallback}</span>'"
+        />
+      </div>
+      <div style="
+        position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+        width:0;height:0;
+        border-left:6px solid transparent;
+        border-right:6px solid transparent;
+        border-top:8px solid ${accentColor};
+      "></div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div style="
+        background:${accentColor};color:#fff;border-radius:50%;
+        width:42px;height:42px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:18px;
+        box-shadow:0 2px 10px rgba(0,0,0,0.22);
+        border:2.5px solid #fff;
+        transition:transform 0.15s ease;
+      ">${store.category?.icon || "🏪"}</div>
+      <div style="
+        position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+        width:0;height:0;
+        border-left:6px solid transparent;
+        border-right:6px solid transparent;
+        border-top:8px solid ${accentColor};
+      "></div>
+    `;
+  }
+
+  return el;
+}
 
 export function StoreMap({
   stores,
@@ -33,6 +91,7 @@ export function StoreMap({
   zoom = 13,
   highlightedStoreId,
   onStoreClick,
+  onMapReady,
   className = "w-full h-full",
 }: StoreMapProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -76,6 +135,7 @@ export function StoreMap({
 
       map.once("load", () => {
         setMapReady(true);
+        onMapReady?.(map);
       });
 
       mapRef.current = map;
@@ -110,24 +170,9 @@ export function StoreMap({
       const lng = parseFloat(String(store.lng));
       const isHighlighted = store.id === highlightedStoreId;
 
-      const el = document.createElement("div");
-      el.className = "store-marker";
-      el.innerHTML = `
-        <div style="
-          background:${isHighlighted ? '#EF4444' : '#2563EB'};
-          color:#fff;
-          border-radius:50%;
-          width:36px;height:36px;
-          display:flex;align-items:center;justify-content:center;
-          font-size:16px;
-          box-shadow:0 2px 8px rgba(0,0,0,0.25);
-          border:2px solid #fff;
-          cursor:pointer;
-          transition:transform 0.15s ease;
-        ">${store.category?.icon || "🏪"}</div>
-      `;
+      const el = buildMarkerEl(store, isHighlighted);
 
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "220px" })
+      const popup = new mapboxgl.Popup({ offset: 28, closeButton: false, maxWidth: "220px" })
         .setHTML(`
           <div style="font-family:sans-serif;padding:4px">
             <p style="font-weight:600;font-size:14px;margin:0 0 2px;color:#1e293b">${store.name}</p>
@@ -139,7 +184,7 @@ export function StoreMap({
           </div>
         `);
 
-      const marker = new mapboxgl.Marker(el)
+      const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
         .setLngLat([lng, lat])
         .setPopup(popup)
         .addTo(map);
