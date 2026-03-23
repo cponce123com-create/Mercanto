@@ -2,10 +2,11 @@ import { Link, useLocation } from "wouter";
 import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { useDistrict } from "@/lib/contexts";
+import { useDistrict, useAuth } from "@/lib/contexts";
 import { ArrowRight, MapPin, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 interface OfferProduct {
   id: number;
@@ -17,6 +18,11 @@ interface OfferProduct {
   offerPrice: string;
   images: Array<{ url: string }>;
   category: { name: string; icon?: string | null } | null;
+}
+
+interface PublicStats {
+  totalStores: number;
+  totalProducts: number;
 }
 
 function fmtPrice(price: string | number | null | undefined) {
@@ -53,7 +59,6 @@ const CATEGORY_ICONS: Record<string, { emoji: string; bg: string }> = {
   "Electrónica y Tecnología":  { emoji: "💻", bg: "#1E3A8A" },
   "Farmacia y Salud":          { emoji: "💊", bg: "#3B82F6" },
   "Belleza y Cuidado Personal":{ emoji: "💄", bg: "#EC4899" },
-  /* fallbacks for other cats */
   "Café y Cacao":              { emoji: "☕", bg: "#92400E" },
   "Miel y Apicultura":         { emoji: "🍯", bg: "#D97706" },
   "Plantas y Hierbas":         { emoji: "🌿", bg: "#16A34A" },
@@ -159,9 +164,8 @@ function BannerCarousel() {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden select-none"
-      style={{ background: `linear-gradient(135deg, ${b.from} 0%, ${b.to} 100%)`, minHeight: "180px" }}
+      style={{ background: `linear-gradient(135deg, ${b.from} 0%, ${b.to} 100%)` }}
     >
-      {/* Wave decoration */}
       <svg className="absolute bottom-0 left-0 w-full opacity-15 pointer-events-none" viewBox="0 0 400 60" preserveAspectRatio="none">
         <path d="M0,30 Q100,60 200,30 T400,30 L400,60 L0,60Z" fill="white" />
       </svg>
@@ -169,41 +173,27 @@ function BannerCarousel() {
         <path d="M0,45 Q100,15 200,45 T400,45 L400,60 L0,60Z" fill="white" />
       </svg>
 
-      {/* Content */}
-      <div className="relative flex items-center px-6 md:px-10 py-6 md:py-8 gap-4 min-h-[180px]">
-        {/* Left: text */}
+      <div className="relative flex items-center px-6 md:px-10 gap-4 min-h-[180px] max-h-[180px] md:max-h-[260px] md:min-h-[200px] py-5 md:py-7">
         <div className="flex-1 min-w-0">
-          <div className="mb-3">
-            <div className="text-white leading-none font-black text-4xl md:text-5xl">{b.headline1}</div>
-            <div className="text-white/90 leading-tight font-light text-2xl md:text-3xl mt-0.5">{b.headline2}</div>
+          <div className="mb-2">
+            <div className="text-white leading-none font-black text-3xl md:text-4xl">{b.headline1}</div>
+            <div className="text-white/90 leading-tight font-light text-xl md:text-2xl mt-0.5">{b.headline2}</div>
           </div>
-
-          {/* Pill — solid white */}
-          <div
-            className="inline-flex items-center bg-white rounded-full px-4 py-2 shadow-sm mb-3"
-          >
-            <span className="font-bold text-sm" style={{ color: b.pillColor }}>
-              {b.pill}
-            </span>
+          <div className="inline-flex items-center bg-white rounded-full px-3 py-1.5 shadow-sm mb-2">
+            <span className="font-bold text-xs" style={{ color: b.pillColor }}>{b.pill}</span>
           </div>
-
-          {/* Badge */}
           <div>
-            <span className="inline-block bg-[#EF4444] text-white font-black text-base md:text-lg px-3 py-1 rounded-xl shadow-lg tracking-tight">
+            <span className="inline-block bg-[#EF4444] text-white font-black text-sm md:text-base px-2.5 py-0.5 rounded-xl shadow-lg tracking-tight">
               {b.badge}
             </span>
           </div>
         </div>
-
-        {/* Right: product emoji grid */}
-        <div className="shrink-0 grid grid-cols-2 gap-2 md:gap-3 pr-2">
+        <div className="shrink-0 grid grid-cols-2 gap-1.5 md:gap-2 pr-1">
           {b.emojis.slice(0, 4).map((e, i) => (
             <div
               key={i}
-              className="text-4xl md:text-5xl drop-shadow-lg flex items-center justify-center"
-              style={{
-                transform: `rotate(${(i % 2 === 0 ? -1 : 1) * 8}deg) translateY(${i < 2 ? "-4px" : "4px"})`,
-              }}
+              className="text-3xl md:text-4xl drop-shadow-lg flex items-center justify-center"
+              style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * 8}deg) translateY(${i < 2 ? "-3px" : "3px"})` }}
             >
               {e}
             </div>
@@ -211,7 +201,6 @@ function BannerCarousel() {
         </div>
       </div>
 
-      {/* Prev / Next */}
       <button
         onClick={() => go((cur - 1 + BANNERS.length) % BANNERS.length)}
         className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/35 text-white rounded-full p-1.5 transition-colors backdrop-blur-sm"
@@ -225,8 +214,7 @@ function BannerCarousel() {
         <ChevronRight className="w-4 h-4" />
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+      <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex gap-1.5">
         {BANNERS.map((_, i) => (
           <button
             key={i}
@@ -242,6 +230,7 @@ function BannerCarousel() {
 /* ─── Page ─── */
 export default function Home() {
   const { district, detecting } = useDistrict();
+  const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: featured, isLoading: loadingFeatured } = useListStores(
@@ -261,7 +250,16 @@ export default function Home() {
     },
   });
 
-  /* Build ordered category list matching target */
+  const { data: stats } = useQuery<PublicStats>({
+    queryKey: ["/api/stats/public"],
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/stats/public`);
+      if (!res.ok) throw new Error("err");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const displayCats = useMemo(() => {
     if (!categories) return [];
     const byName: Record<string, (typeof categories)[0]> = Object.fromEntries(
@@ -302,30 +300,38 @@ export default function Home() {
       <main className="flex-1">
         <div className="container mx-auto px-3 md:px-4 py-3 space-y-4">
 
-          {/* ── Banner rotativo ── */}
-          <BannerCarousel />
+          {/* ── Banner comprador / vendedor (solo para no autenticados) ── */}
+          {!isAuthenticated && (
+            <div className="bg-gradient-to-r from-blue-50 to-orange-50 border border-gray-100 rounded-xl p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-800 text-sm">¿Eres comprador o vendedor?</p>
+                <p className="text-gray-500 text-xs mt-0.5">Descubre tiendas cerca de ti o abre la tuya gratis</p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Link href="/auth/register">
+                  <Button size="sm" variant="outline" className="text-xs border-[#2563EB] text-[#2563EB]">Explorar tiendas</Button>
+                </Link>
+                <Link href="/create-store">
+                  <Button size="sm" className="text-xs bg-[#f97316] text-white hover:bg-orange-600">Vender gratis</Button>
+                </Link>
+              </div>
+            </div>
+          )}
 
-          {/* ── 3 Feature banners con foto ── */}
-          <div className="grid grid-cols-3 gap-2 md:gap-3">
-            {FEATURE_BANNERS.map(fb => (
-              <Link key={fb.slug} href={`/stores?category=${fb.slug}`}>
-                <div className="relative h-28 md:h-40 rounded-xl overflow-hidden cursor-pointer group">
-                  <img
-                    src={fb.img}
-                    alt={fb.label}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 px-2.5 py-2">
-                    <span className="text-white font-bold text-xs md:text-sm leading-tight drop-shadow-md">
-                      {fb.label}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {/* ── Contador de actividad ── */}
+          {stats && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm flex justify-center gap-8 py-3 text-center">
+              <div>
+                <p className="text-xl font-black text-[#2563EB]">{stats.totalStores.toLocaleString()}</p>
+                <p className="text-[11px] text-gray-500">tiendas activas</p>
+              </div>
+              <div className="w-px bg-gray-200" />
+              <div>
+                <p className="text-xl font-black text-[#f97316]">{stats.totalProducts.toLocaleString()}</p>
+                <p className="text-[11px] text-gray-500">productos disponibles</p>
+              </div>
+            </div>
+          )}
 
           {/* ── Categorías Populares ── */}
           <section className="bg-white rounded-2xl py-5 px-4 border border-gray-100 shadow-sm">
@@ -355,6 +361,28 @@ export default function Home() {
             </div>
           </section>
 
+          {/* ── 3 Feature banners con foto ── */}
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
+            {FEATURE_BANNERS.map(fb => (
+              <Link key={fb.slug} href={`/stores?category=${fb.slug}`}>
+                <div className="relative h-24 md:h-36 rounded-xl overflow-hidden cursor-pointer group">
+                  <img
+                    src={fb.img}
+                    alt={fb.label}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 px-2.5 py-2">
+                    <span className="text-white font-bold text-xs md:text-sm leading-tight drop-shadow-md">
+                      {fb.label}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
           {/* ── Tiendas Destacadas ── */}
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -373,7 +401,6 @@ export default function Home() {
                 {featured.stores.map((store, idx) => (
                   <Link key={store.id} href={`/stores/${store.slug}`}>
                     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md hover:border-[#2563EB]/40 transition-all group cursor-pointer">
-                      {/* Photo */}
                       <div className="relative h-28 md:h-32 overflow-hidden bg-gray-100">
                         <img
                           src={store.bannerUrl || STORE_PHOTOS[idx % STORE_PHOTOS.length]}
@@ -382,7 +409,6 @@ export default function Home() {
                           loading="lazy"
                         />
                       </div>
-                      {/* Info */}
                       <div className="p-2.5 md:p-3">
                         <p className="font-semibold text-sm text-[#1E293B] mb-1 line-clamp-1">{store.name}</p>
                         {store.district && (
@@ -400,14 +426,12 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
-                <p className="text-gray-500 text-sm mb-3">No hay tiendas destacadas en {district} aún.</p>
-                <button
-                  onClick={() => setLocation("/create-store")}
-                  className="px-4 py-2 bg-[#2563EB] text-white text-sm font-semibold rounded-lg hover:bg-[#1d4ed8] transition-colors"
-                >
-                  Registra tu tienda
-                </button>
+              <div className="text-center py-8 px-4 bg-white rounded-2xl border border-dashed border-gray-200">
+                <p className="text-gray-500 text-sm mb-1">Aún no hay tiendas en <strong>{district || "tu distrito"}</strong></p>
+                <p className="text-gray-400 text-xs mb-4">¿Tienes un negocio aquí? Sé el primero.</p>
+                <Link href="/create-store">
+                  <Button size="sm" className="bg-[#2563EB] text-white">Abrir mi tienda gratis</Button>
+                </Link>
               </div>
             )}
           </section>
@@ -511,20 +535,23 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
-                <p className="text-gray-500 text-sm">No hay ofertas disponibles en {district} por ahora.</p>
+              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-6 text-center">
+                <p className="text-gray-500 text-sm mb-1">No hay ofertas en <strong>{district || "tu distrito"}</strong> por ahora</p>
+                <p className="text-gray-400 text-xs">Vuelve pronto o explora otros distritos</p>
               </div>
             )}
           </section>
 
+          {/* ── Banner rotativo (al final, compacto) ── */}
+          <BannerCarousel />
+
           {/* ── Banners promocionales ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
-            {/* Orange */}
             <div
               className="rounded-2xl relative flex items-center gap-4 px-5 py-4 cursor-pointer hover:brightness-105 transition-all overflow-hidden"
               style={{ background: "linear-gradient(135deg, #F97316 0%, #FB923C 100%)" }}
+              onClick={() => setLocation("/stores")}
             >
-              {/* big faint bg emoji */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 text-7xl opacity-20 pointer-events-none select-none">
                 🎁
               </div>
@@ -539,10 +566,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Blue */}
             <div
               className="rounded-2xl relative flex items-center gap-4 px-5 py-4 cursor-pointer hover:brightness-105 transition-all overflow-hidden"
               style={{ background: "linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)" }}
+              onClick={() => setLocation("/create-store")}
             >
               <div className="absolute right-4 top-1/2 -translate-y-1/2 text-7xl opacity-10 pointer-events-none select-none">
                 ✅

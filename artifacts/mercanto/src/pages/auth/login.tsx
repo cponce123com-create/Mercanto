@@ -10,7 +10,7 @@ import { Store, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAuthMeQueryKey } from "@workspace/api-client-react";
-import { setStoredToken } from "@/lib/contexts";
+
 
 const schema = z.object({
   email: z.string().email("Correo inválido"),
@@ -30,7 +30,6 @@ export default function Login() {
   const loginMutation = useAuthLogin({
     mutation: {
       onSuccess: (data) => {
-        if (data.token) setStoredToken(data.token);
         queryClient.setQueryData(getAuthMeQueryKey(), data.user);
         toast.success("¡Bienvenido de vuelta!");
         const dest = redirectTo || (data.user.role === 'vendor' ? '/vendor' : (data.user.role === 'admin' ? '/admin' : '/'));

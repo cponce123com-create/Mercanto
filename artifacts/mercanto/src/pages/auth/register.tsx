@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAuthMeQueryKey } from "@workspace/api-client-react";
 import { DISTRICTS } from "@/lib/constants";
-import { setStoredToken } from "@/lib/contexts";
+
 
 const schema = z.object({
   name: z.string().min(2, "Mínimo 2 caracteres"),
@@ -34,7 +34,6 @@ export default function Register() {
   const registerMutation = useAuthRegister({
     mutation: {
       onSuccess: (data) => {
-        if (data.token) setStoredToken(data.token);
         queryClient.setQueryData(getAuthMeQueryKey(), data.user);
         toast.success("¡Cuenta creada exitosamente!");
         setLocation('/create-store');

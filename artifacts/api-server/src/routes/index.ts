@@ -12,10 +12,12 @@ import adminRouter from "./admin.js";
 import uploadRouter from "./upload.js";
 import favoritesRouter from "./favorites.js";
 import cronRouter from "./cron.js";
+import statsRouter from "./stats.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use("/stats", statsRouter);
 router.use("/auth", authRouter);
 router.use("/categories", categoriesRouter);
 router.use("/banners", bannersRouter);

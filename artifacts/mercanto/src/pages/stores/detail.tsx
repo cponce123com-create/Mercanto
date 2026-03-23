@@ -170,6 +170,114 @@ function ReviewForm({ storeSlug, existingReview, onDone }: ReviewFormProps) {
   );
 }
 
+// ─── Producer contact form ────────────────────────────────────────────────────
+
+function ProducerContactForm({ storeName, whatsapp }: { storeName: string; whatsapp?: string | null }) {
+  const [product, setProduct] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product.trim()) { toast.error("Indica qué producto te interesa"); return; }
+    if (!contactName.trim()) { toast.error("Ingresa tu nombre"); return; }
+    const msg = [
+      `Hola ${storeName}, me comunico desde Mercanto 🛒`,
+      `Producto de interés: *${product.trim()}*`,
+      quantity.trim() ? `Cantidad: ${quantity.trim()}` : null,
+      `Mi nombre: ${contactName.trim()}`,
+      phone.trim() ? `Mi contacto: ${phone.trim()}` : null,
+    ].filter(Boolean).join("\n");
+    if (whatsapp) {
+      const num = whatsapp.replace(/\D/g, "");
+      window.open(`https://wa.me/${num.startsWith("51") ? num : `51${num}`}?text=${encodeURIComponent(msg)}`, "_blank");
+    } else {
+      navigator.clipboard.writeText(msg).catch(() => {});
+      toast.success("Mensaje copiado al portapapeles");
+    }
+    setSent(true);
+  };
+
+  if (sent) {
+    return (
+      <div className="rounded-2xl border border-green-200 bg-green-50 p-5 text-center space-y-2">
+        <div className="text-3xl">🌿</div>
+        <p className="font-semibold text-green-800 text-sm">¡Consulta enviada al productor!</p>
+        <p className="text-xs text-green-600">El productor te responderá pronto por WhatsApp.</p>
+        <button
+          onClick={() => setSent(false)}
+          className="text-xs text-green-700 underline mt-1 hover:text-green-900"
+        >
+          Enviar otra consulta
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSend} className="rounded-2xl border border-[#16A34A]/25 bg-green-50/60 p-5 space-y-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-lg">🌿</span>
+        <h4 className="font-bold text-[#15803D] text-sm">Consultar al Productor</h4>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">¿Qué producto te interesa? *</label>
+        <input
+          value={product}
+          onChange={e => setProduct(e.target.value)}
+          placeholder="Ej: Café especial, miel de abejas..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] bg-white"
+          maxLength={100}
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Cantidad aproximada</label>
+        <input
+          value={quantity}
+          onChange={e => setQuantity(e.target.value)}
+          placeholder="Ej: 5 kg, 2 cajas, 1 arroba..."
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] bg-white"
+          maxLength={60}
+        />
+      </div>
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Tu nombre *</label>
+          <input
+            value={contactName}
+            onChange={e => setContactName(e.target.value)}
+            placeholder="Tu nombre completo"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] bg-white"
+            maxLength={60}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Tu celular</label>
+          <input
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder="9XX XXX XXX"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16A34A]/30 focus:border-[#16A34A] bg-white"
+            maxLength={12}
+          />
+        </div>
+      </div>
+      <Button
+        type="submit"
+        className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white gap-2 rounded-xl"
+      >
+        <Send className="w-4 h-4" />
+        {whatsapp ? "Enviar consulta por WhatsApp" : "Copiar mensaje de consulta"}
+      </Button>
+      <p className="text-[10px] text-gray-400 text-center">
+        Tu mensaje se enviará directamente al productor de forma privada.
+      </p>
+    </form>
+  );
+}
+
 // ─── Reviews section ──────────────────────────────────────────────────────────
 
 function ReviewsSection({ storeSlug }: { storeSlug: string }) {
@@ -386,6 +494,7 @@ export default function StoreDetail() {
   const doesDelivery: boolean = storeAny.doesDelivery ?? false;
   const deliveryRadius: number | null = storeAny.deliveryRadius ?? null;
   const fav = isFavorite(store.id);
+  const isProducer = storeAny.storeType === "producer";
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F8FAFC" }}>
@@ -436,14 +545,16 @@ export default function StoreDetail() {
                 </div>
 
                 <div className="flex flex-col gap-2 w-full md:w-auto shrink-0">
-                  <Button
-                    size="lg"
-                    className="bg-[#25D366] hover:bg-[#20bd5a] text-white h-12 rounded-xl gap-2 w-full md:w-auto"
-                    onClick={handleWhatsApp}
-                    disabled={!store.whatsapp}
-                  >
-                    <Phone className="w-5 h-5" /> Contactar por WhatsApp
-                  </Button>
+                  {!isProducer && (
+                    <Button
+                      size="lg"
+                      className="bg-[#25D366] hover:bg-[#20bd5a] text-white h-12 rounded-xl gap-2 w-full md:w-auto"
+                      onClick={handleWhatsApp}
+                      disabled={!store.whatsapp}
+                    >
+                      <Phone className="w-5 h-5" /> Contactar por WhatsApp
+                    </Button>
+                  )}
                   {store.lat && store.lng && (
                     <Link href={`/map?district=${encodeURIComponent(store.district || "")}&storeId=${store.id}`}>
                       <Button
@@ -468,6 +579,12 @@ export default function StoreDetail() {
                   )}
                 </div>
               </div>
+
+              {isProducer && (
+                <div className="mt-5 pt-5 border-t border-gray-100">
+                  <ProducerContactForm storeName={store.name} whatsapp={store.whatsapp} />
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-gray-100">
                 {store.location && <span className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-4 h-4 shrink-0" /> {store.location}</span>}

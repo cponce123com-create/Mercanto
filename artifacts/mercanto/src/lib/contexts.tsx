@@ -1,25 +1,10 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import { useAuthMe, useAuthLogout, type UserPublic, setAuthTokenGetter } from "@workspace/api-client-react";
+import { useAuthMe, useAuthLogout, type UserPublic } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAuthMeQueryKey } from "@workspace/api-client-react";
 import { DISTRICTS } from "@/lib/constants";
 
-const TOKEN_KEY = "mercanto_jwt";
 const DISTRICT_KEY = "mercanto_district";
-
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearStoredToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
-}
-
-setAuthTokenGetter(() => getStoredToken());
 
 interface AuthContextType {
   user: UserPublic | null;
@@ -42,11 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useAuthLogout({
     mutation: {
       onSuccess: () => {
-        clearStoredToken();
         queryClient.setQueryData(getAuthMeQueryKey(), null);
       },
       onError: () => {
-        clearStoredToken();
         queryClient.setQueryData(getAuthMeQueryKey(), null);
       }
     }

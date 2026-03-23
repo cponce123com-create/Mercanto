@@ -110,8 +110,8 @@ React + Vite frontend for the Mercanto marketplace. Key pages:
 - `/admin/categories` — manage marketplace categories (CRUD, toggle active)
 - `/admin/banners` — manage homepage banner carousel (CRUD, Cloudinary upload)
 
-Auth: JWT stored in `localStorage` as `mercanto_jwt`; sent as `Authorization: Bearer` via `setAuthTokenGetter`.
-Admin credentials: `admin@mercanto.pe` / `Admin2024!`
+Auth: httpOnly cookie `mercanto_token` (sameSite: lax, 30d); NO localStorage. All fetches use `credentials: "include"`.
+Admin credentials: `admin@mercanto.pe` / `Admin2024!`. Vendor: `User2024!`
 
 **Phase 3 features added:**
 - `userFavoritesTable` in DB; `GET/POST/DELETE /api/favorites` endpoints; `useFavorites` hook with optimistic updates
@@ -120,6 +120,16 @@ Admin credentials: `admin@mercanto.pe` / `Admin2024!`
 - Store schema extended: `paymentMethods` (JSON array), `openingHours` (JSON object), `doesDelivery` (boolean), `deliveryRadius` (integer)
 - Vendor store-settings page: payment methods checkboxes, opening hours by day, delivery toggle + radius
 - Store detail "Sobre Nosotros" tab: payment badges, opening hours table, delivery status
+
+**Phase 4 features added:**
+- DB migration: `store_type` column on stores (`"local"` | `"producer"`), DNI fields on users (`dni_number`, `dni_front/back_url/public_id`, `identity_verified`, `identity_rejected_reason`)
+- Security: removed all localStorage JWT; auth now solely via httpOnly cookie
+- Home page restructured: buyer/seller CTA banner → stats counter → categories → feature photo banners → featured stores → Compra al Productor → offers → hero carousel
+- `GET /api/stats/public` endpoint (totalStores, totalProducts) — used by home page counter
+- Vendor CTA banner in stores directory
+- Mobile district selector: larger tap target, improved spacing
+- Express `trust proxy` set to 1 (eliminates rate-limiter `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` warning)
+- Producer inquiry form in store detail page: shows `ProducerContactForm` instead of WhatsApp button when `storeType === "producer"`; generates pre-filled WhatsApp message with product, quantity, buyer name & phone
 
 ### `scripts` (`@workspace/scripts`)
 

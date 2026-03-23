@@ -1,0 +1,120 @@
+Prompt para Replit — Crítica técnica:
+Hay un problema de seguridad importante: el token JWT se está guardando en localStorage con la clave mercanto_jwt en artifacts/mercanto/src/lib/contexts.tsx, pero en la fase anterior ya configuramos el token para que viaje únicamente en una cookie httpOnly. Tener los dos mecanismos en paralelo es inseguro porque localStorage es vulnerable a XSS.
+Necesito que unifiques todo en la cookie httpOnly y elimines completamente el uso de localStorage para el token. Haz lo siguiente:
+1. Eliminar el token de localStorage en el frontend
+En artifacts/mercanto/src/lib/contexts.tsx:
+
+Elimina las funciones getStoredToken, setStoredToken, clearStoredToken
+Elimina la constante TOKEN_KEY = "mercanto_jwt"
+Elimina la llamada setAuthTokenGetter(() => getStoredToken())
+Elimina cualquier otro lugar donde se lea o escriba mercanto_jwt en localStorage
+
+2. Asegurarse que el API client use credenciales (cookies)
+En lib/api-client-react/src/custom-fetch.ts, verifica que todas las llamadas al API incluyan credentials: "include" para que el navegador envíe automáticamente la cookie httpOnly en cada request. Si no está, agrégalo como opción global en el fetch base.
+3. Verificar que el backend no depende del header Authorization para nada
+En artifacts/api-server/src/lib/auth.ts, la función getTokenFromRequest lee tanto el header Authorization: Bearer ... como la cookie mercanto_token. Está bien mantener el header para compatibilidad con la API directa, pero asegúrate de que el flujo principal del frontend use solo la cookie.
+4. Limpiar cualquier referencia residual
+Busca en todo el frontend (artifacts/mercanto/src/) cualquier uso de localStorage.getItem("mercanto_jwt") o localStorage.setItem("mercanto_jwt", ...) y elimínalos.
+Después de los cambios, prueba que el login, el logout y las rutas protegidas sigan funcionando correctamente. Corre pnpm typecheck para verificar que no hay errores de TypeScript.
+
+
+
+Prompt para Replit — Crítica visual y UX:
+Necesito tres mejoras de diseño y experiencia de usuario en el frontend de Mercanto:
+1. Reordenar la jerarquía visual del home
+En artifacts/mercanto/src/pages/home.tsx, el orden actual de secciones es: banner hero → categorías → tiendas → ofertas. Cámbialo a este orden:
+
+Barra de búsqueda prominente (si no está ya al tope del contenido, muévela o agrégala aquí como componente destacado con placeholder "¿Qué estás buscando en tu distrito?")
+Categorías populares (acceso rápido)
+Tiendas destacadas
+Ofertas
+Banner hero (muévelo al final o conviértelo en un banner secundario más compacto de altura máxima 180px en mobile)
+
+El banner hero actual ocupa demasiado espacio vertical en mobile. Reduce su altura máxima a max-h-[180px] en mobile y max-h-[260px] en desktop.
+2. Mejorar el selector de distrito en mobile
+En artifacts/mercanto/src/components/layout/Navbar.tsx, el selector de distrito en mobile usa texto de 10px que es muy difícil de tocar. Aplica estos cambios al componente móvil del selector:
+
+Aumenta el texto del distrito a mínimo text-sm (14px)
+Agranda el área clickeable a mínimo 44x44px (usa min-h-[44px] min-w-[44px] con padding generoso)
+Agrega un ícono de MapPin de lucide-react de tamaño 16px antes del nombre del distrito
+El color del texto debe ser text-gray-800 (no gris claro) para mejor legibilidad
+
+3. Mejorar los estados vacíos con CTAs accionables
+En artifacts/mercanto/src/pages/home.tsx, reemplaza los mensajes de estado vacío por componentes más atractivos:
+Donde dice "No hay tiendas destacadas en X aún", reemplaza por:
+tsx<div className="text-center py-8 px-4">
+  <p className="text-gray-500 text-sm mb-1">Aún no hay tiendas en <strong>{district}</strong></p>
+  <p className="text-gray-400 text-xs mb-4">¿Tienes un negocio aquí? Sé el primero.</p>
+  <Link href="/create-store">
+    <Button size="sm" className="bg-[#2563EB] text-white">Abrir mi tienda gratis</Button>
+  </Link>
+</div>
+Donde dice "No hay ofertas disponibles en X por ahora", reemplaza por:
+tsx<div className="text-center py-6 px-4">
+  <p className="text-gray-500 text-sm mb-1">No hay ofertas en <strong>{district}</strong> por ahora</p>
+  <p className="text-gray-400 text-xs">Vuelve pronto o explora otros distritos</p>
+</div>
+En ambos casos asegúrate de importar los componentes necesarios si no están ya importados (Button, Link).
+
+
+
+Prompt para Replit — Marketing y propuesta de valor:
+Necesito tres cambios orientados a la conversión y diferenciación de Mercanto como marketplace vecinal:
+1. Diferenciar el mensaje según el tipo de usuario en el home
+En artifacts/mercanto/src/pages/home.tsx, si el usuario NO está autenticado, muestra un banner de bienvenida justo debajo del navbar (antes de las categorías) con dos columnas o dos botones bien diferenciados:
+tsx{!isAuthenticated && (
+  <div className="bg-gradient-to-r from-blue-50 to-orange-50 border border-gray-100 rounded-xl p-4 mx-4 mb-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+    <div>
+      <p className="font-semibold text-gray-800 text-sm">¿Eres comprador o vendedor?</p>
+      <p className="text-gray-500 text-xs mt-0.5">Descubre tiendas cerca de ti o abre la tuya gratis</p>
+    </div>
+    <div className="flex gap-2 shrink-0">
+      <Link href="/auth/register">
+        <Button size="sm" variant="outline" className="text-xs border-[#2563EB] text-[#2563EB]">Explorar tiendas</Button>
+      </Link>
+      <Link href="/create-store">
+        <Button size="sm" className="text-xs bg-[#f97316] text-white hover:bg-orange-600">Vender gratis</Button>
+      </Link>
+    </div>
+  </div>
+)}
+Importa useAuth desde @/lib/contexts si no está ya importado en home.tsx y desestructura isAuthenticated de él.
+2. Agregar contador de actividad real en el home
+Debajo del banner de bienvenida (o debajo del selector de distrito activo), muestra una línea de estadísticas en tiempo real usando datos que ya tienes en el API. Llama al endpoint GET /api/admin/stats — si el usuario es admin ya tienes acceso, pero para usuarios normales necesitas un endpoint público de stats básicas.
+Primero crea en artifacts/api-server/src/routes/index.ts (o en un archivo nuevo stats.ts) el endpoint público:
+tsrouter.get("/stats/public", async (_req, res) => {
+  try {
+    const [[{ totalStores }], [{ totalProducts }]] = await Promise.all([
+      db.select({ totalStores: count() }).from(storesTable).where(eq(storesTable.status, "active")),
+      db.select({ totalProducts: count() }).from(productsTable).where(eq(productsTable.status, "active")),
+    ]);
+    res.json({ totalStores: Number(totalStores), totalProducts: Number(totalProducts) });
+  } catch {
+    res.status(500).json({ error: "Failed" });
+  }
+});
+Importa count, storesTable, productsTable, eq y db donde corresponda.
+Luego en el home, consume ese endpoint con un useQuery y muestra algo como:
+tsx{stats && (
+  <div className="flex justify-center gap-6 py-2 text-center">
+    <div>
+      <p className="text-lg font-bold text-[#2563EB]">{stats.totalStores}</p>
+      <p className="text-[11px] text-gray-500">tiendas activas</p>
+    </div>
+    <div className="w-px bg-gray-200" />
+    <div>
+      <p className="text-lg font-bold text-[#f97316]">{stats.totalProducts}</p>
+      <p className="text-[11px] text-gray-500">productos disponibles</p>
+    </div>
+  </div>
+)}
+3. Agregar mensaje de incentivo para vendedores en la página de categorías y listado de tiendas
+En artifacts/mercanto/src/pages/stores/index.tsx (o el archivo del listado de tiendas), al final de la lista de resultados — después del último StoreCard y antes del paginador si hay — agrega este bloque fijo:
+tsx<div className="border border-dashed border-[#2563EB] rounded-xl p-5 text-center bg-blue-50 mt-4">
+  <p className="text-sm font-semibold text-[#1e40af] mb-1">¿Tu negocio no está aquí?</p>
+  <p className="text-xs text-blue-600 mb-3">Regístrate gratis y empieza a vender a tus vecinos hoy mismo</p>
+  <Link href="/create-store">
+    <Button size="sm" className="bg-[#2563EB] text-white text-xs">Abrir mi tienda — es gratis</Button>
+  </Link>
+</div>
+En todos los casos donde uses Link, verifica que el import sea el correcto para el router que usa el proyecto (wouter). Corre pnpm typecheck al finalizar.

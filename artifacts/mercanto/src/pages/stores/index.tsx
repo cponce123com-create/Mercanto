@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useSearch, useLocation } from "wouter";
+import { useSearch, useLocation, Link } from "wouter";
 import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -219,6 +219,14 @@ export default function StoresDirectory() {
               {stores.map((store) => (
                 <StoreCard key={store.id} store={store} />
               ))}
+            </div>
+
+            <div className="border border-dashed border-[#2563EB] rounded-xl p-5 text-center bg-blue-50 mt-4">
+              <p className="text-sm font-semibold text-[#1e40af] mb-1">¿Tu negocio no está aquí?</p>
+              <p className="text-xs text-blue-600 mb-3">Regístrate gratis y empieza a vender a tus vecinos hoy mismo</p>
+              <Link href="/create-store">
+                <Button size="sm" className="bg-[#2563EB] text-white text-xs">Abrir mi tienda — es gratis</Button>
+              </Link>
             </div>
 
             {totalPages > 1 && (

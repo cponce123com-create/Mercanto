@@ -231,7 +231,7 @@ export default function CreateStore() {
         lat: finalCoords.lat.toString(),
         lng: finalCoords.lng.toString(),
         district: storeType === "producer" ? data.district || "" : data.district,
-      },
+      } as any,
     });
   };
 
