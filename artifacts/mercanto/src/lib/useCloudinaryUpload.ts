@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getStoredToken } from "@/lib/contexts";
 
 export interface CloudinaryUploadResult {
   url: string;
@@ -28,9 +29,13 @@ export function useCloudinaryUpload() {
 
     try {
       // Step 1: Get signature from backend
+      const token = getStoredToken();
       const signRes = await fetch(`${import.meta.env.BASE_URL}api/upload/sign`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         credentials: "include",
         body: JSON.stringify({ folder }),
       });

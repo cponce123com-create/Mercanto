@@ -16,9 +16,13 @@ import Register from "@/pages/auth/register";
 import CreateStore from "@/pages/create-store";
 import VendorDashboard from "@/pages/vendor/dashboard";
 import VendorProducts from "@/pages/vendor/products";
+import VendorStoreSettings from "@/pages/vendor/store-settings";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStores from "@/pages/admin/stores";
 import AdminStoreDetail from "@/pages/admin/store-detail";
+import AdminUsers from "@/pages/admin/users";
+import AdminCategories from "@/pages/admin/categories";
+import AdminBanners from "@/pages/admin/banners";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,10 +48,14 @@ function Router() {
       
       <Route path="/vendor" component={VendorDashboard} />
       <Route path="/vendor/products" component={VendorProducts} />
+      <Route path="/vendor/store" component={VendorStoreSettings} />
       
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/stores" component={AdminStores} />
       <Route path="/admin/stores/:id" component={AdminStoreDetail} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/admin/banners" component={AdminBanners} />
       
       <Route component={NotFound} />
     </Switch>

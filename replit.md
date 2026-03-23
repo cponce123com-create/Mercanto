@@ -91,6 +91,28 @@ Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used b
 
 Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
 
+### `artifacts/mercanto` (`@workspace/mercanto`)
+
+React + Vite frontend for the Mercanto marketplace. Key pages:
+
+**Public:** `/` (home), `/stores` (directory), `/stores/:slug` (detail), `/map`, `/search`, `/login`, `/register`, `/create-store`
+
+**Vendor Dashboard** (`/vendor/*`):
+- `/vendor` — stats dashboard
+- `/vendor/products` — manage products
+- `/vendor/store` — store settings (logo, banner, contact, location)
+
+**Admin Panel** (`/admin/*`):
+- `/admin` — overview dashboard with stats + quick access
+- `/admin/stores` — list all stores (activate/suspend/featured/audit)
+- `/admin/stores/:id` — audit store detail (products + reviews)
+- `/admin/users` — manage users (roles, block/unblock)
+- `/admin/categories` — manage marketplace categories (CRUD, toggle active)
+- `/admin/banners` — manage homepage banner carousel (CRUD, Cloudinary upload)
+
+Auth: JWT stored in `localStorage` as `mercanto_jwt`; sent as `Authorization: Bearer` via `setAuthTokenGetter`.
+Admin credentials: `admin@mercanto.pe` / `Admin2024!`
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
