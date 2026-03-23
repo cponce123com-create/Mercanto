@@ -44,6 +44,7 @@
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-query": "catalog:",
+    "@types/mapbox-gl": "^3.5.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
@@ -75,9 +76,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@types/leaflet": "^1.9.21",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0",
+    "mapbox-gl": "^3.20.0",
     "use-debounce": "^10.1.0"
   }
 }

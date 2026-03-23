@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import mapboxgl from "mapbox-gl";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -162,42 +164,58 @@ export default function CreateStore() {
     }
   };
 
-  const initMiniMap = async (lat: number, lng: number) => {
+  const initMiniMap = (lat: number, lng: number) => {
     if (!miniMapRef.current) return;
-    const L = (await import("leaflet")).default;
-    await import("leaflet/dist/leaflet.css");
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-      iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-      shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-    });
+
     if (miniMapInstanceRef.current) {
-      miniMapInstanceRef.current.setView([lat, lng], 16);
-      if (miniMarkerRef.current) miniMarkerRef.current.setLatLng([lat, lng]);
+      miniMapInstanceRef.current.flyTo({ center: [lng, lat], zoom: 16 });
+      miniMarkerRef.current?.setLngLat([lng, lat]);
       return;
     }
-    const map = L.map(miniMapRef.current, { center: [lat, lng], zoom: 16, zoomControl: false });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(map);
-    const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    marker.on("dragend", () => {
-      const pos = marker.getLatLng();
-      setCoords({ lat: pos.lat, lng: pos.lng });
+
+    const map = new mapboxgl.Map({
+      container: miniMapRef.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [lng, lat],
+      zoom: 16,
     });
+
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+    const marker = new mapboxgl.Marker({ draggable: true, color: "#f97316" })
+      .setLngLat([lng, lat])
+      .addTo(map);
+
+    marker.on("dragend", () => {
+      const lngLat = marker.getLngLat();
+      setCoords({ lat: lngLat.lat, lng: lngLat.lng });
+    });
+
+    map.on("click", (e: mapboxgl.MapMouseEvent) => {
+      marker.setLngLat(e.lngLat);
+      setCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    });
+
     miniMapInstanceRef.current = map;
     miniMarkerRef.current = marker;
   };
+
+  useEffect(() => {
+    if (!coords || !miniMapInstanceRef.current || !miniMarkerRef.current) return;
+    miniMarkerRef.current.setLngLat([coords.lng, coords.lat]);
+    miniMapInstanceRef.current.flyTo({ center: [coords.lng, coords.lat], zoom: 16 });
+  }, [coords]);
 
   const requestGPS = () => {
     if (!navigator.geolocation) { toast.error("Tu navegador no soporta geolocalización"); return; }
     setGpsStatus("loading");
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+      (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setCoords({ lat, lng });
         setGpsStatus("success");
         toast.success("Ubicación capturada correctamente");
-        await initMiniMap(lat, lng);
+        initMiniMap(lat, lng);
       },
       () => {
         setGpsStatus("error");

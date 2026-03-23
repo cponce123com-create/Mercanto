@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import mapboxgl from "mapbox-gl";
+
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
 interface StoreMapItem {
   id: number;
@@ -10,6 +12,7 @@ interface StoreMapItem {
   district: string;
   category?: { name: string; icon?: string | null } | null;
   logoUrl?: string | null;
+  whatsapp?: string | null;
 }
 
 interface StoreMapProps {
@@ -23,171 +26,135 @@ interface StoreMapProps {
 
 const SAN_RAMON_CENTER: [number, number] = [-11.1297, -75.3500];
 
-function buildMarkerHtml(store: StoreMapItem, isHighlighted: boolean): string {
-  return `<div style="
-    background: ${isHighlighted ? '#EF4444' : '#2563EB'};
-    color: white;
-    border-radius: 50% 50% 50% 0;
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-    transform: rotate(-45deg);
-    border: 2px solid white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    cursor: pointer;
-  ">
-    <span style="transform: rotate(45deg); font-size: 14px;">
-      ${store.category?.icon || '🏪'}
-    </span>
-  </div>`;
-}
-
-function buildPopupHtml(store: StoreMapItem): string {
-  return `<div style="min-width: 160px; font-family: sans-serif;">
-    <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #1e293b;">${store.name}</div>
-    <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">${store.category?.name || ''} · ${store.district}</div>
-    <a href="/stores/${store.slug}"
-       style="display: block; background: #2563EB; color: white; text-align: center; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none;">
-      Ver tienda →
-    </a>
-  </div>`;
-}
-
 export function StoreMap({
   stores,
   center,
-  zoom = 15,
+  zoom = 13,
   highlightedStoreId,
   onStoreClick,
   className = "w-full h-full",
 }: StoreMapProps) {
-  const mapRef = useRef<LeafletMap | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<Map<number, LeafletMarker>>(new Map());
-  const LRef = useRef<typeof import("leaflet") | null>(null);
-  const readyRef = useRef(false);
+  const markersRef = useRef<Map<number, mapboxgl.Marker>>(new Map());
 
-  // ── 1. Initialize map once ─────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const initMap = async () => {
-      const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
+    const mapCenter: [number, number] = center
+      ? [center[1], center[0]]
+      : [SAN_RAMON_CENTER[1], SAN_RAMON_CENTER[0]];
 
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
+    mapRef.current = new mapboxgl.Map({
+      container: containerRef.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: mapCenter,
+      zoom,
+    });
 
-      const mapCenter = center || SAN_RAMON_CENTER;
-      const map = L.map(containerRef.current!, {
-        center: mapCenter,
-        zoom,
-        zoomControl: true,
-        scrollWheelZoom: true,
-      });
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
-
-      LRef.current = L;
-      mapRef.current = map;
-      readyRef.current = true;
-
-      // Force Leaflet to recalculate size after layout settles (fixes blank map on mobile)
-      requestAnimationFrame(() => map.invalidateSize());
-      setTimeout(() => {
-        map.invalidateSize();
-        renderMarkers(L, map, stores, highlightedStoreId, center);
-      }, 150);
-    };
-
-    initMap();
+    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+    mapRef.current.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: false,
+        showUserHeading: false,
+      }),
+      "top-right",
+    );
 
     return () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current.clear();
       mapRef.current?.remove();
       mapRef.current = null;
-      markersRef.current.clear();
-      readyRef.current = false;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── 2. Re-render markers whenever stores or highlighted store changes ──────
   useEffect(() => {
-    const L = LRef.current;
     const map = mapRef.current;
-    if (!L || !map || !readyRef.current) return;
-    renderMarkers(L, map, stores, highlightedStoreId, center);
-  }, [stores, highlightedStoreId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!map) return;
 
-  // ── Marker renderer (pure function, no hooks) ──────────────────────────────
-  function renderMarkers(
-    L: typeof import("leaflet"),
-    map: LeafletMap,
-    currentStores: StoreMapItem[],
-    highlighted: number | undefined,
-    mapCenter: [number, number] | undefined,
-  ) {
-    // Remove all existing markers
     markersRef.current.forEach(m => m.remove());
     markersRef.current.clear();
 
-    const validStores = currentStores.filter(s => s.lat && s.lng);
+    const validStores = stores.filter(s => {
+      const lat = parseFloat(String(s.lat));
+      const lng = parseFloat(String(s.lng));
+      return !isNaN(lat) && !isNaN(lng);
+    });
 
     validStores.forEach(store => {
-      const lat = parseFloat(store.lat!);
-      const lng = parseFloat(store.lng!);
-      if (isNaN(lat) || isNaN(lng)) return;
+      const lat = parseFloat(String(store.lat));
+      const lng = parseFloat(String(store.lng));
+      const isHighlighted = store.id === highlightedStoreId;
 
-      const isHighlighted = store.id === highlighted;
+      const el = document.createElement("div");
+      el.className = "store-marker";
+      el.innerHTML = `
+        <div style="
+          background:${isHighlighted ? '#EF4444' : '#2563EB'};
+          color:#fff;
+          border-radius:50%;
+          width:36px;height:36px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:16px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.25);
+          border:2px solid #fff;
+          cursor:pointer;
+          transition:transform 0.15s ease;
+        ">${store.category?.icon || "🏪"}</div>
+      `;
 
-      const icon = L.divIcon({
-        html: buildMarkerHtml(store, isHighlighted),
-        className: "",
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -36],
+      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "220px" })
+        .setHTML(`
+          <div style="font-family:sans-serif;padding:4px">
+            <p style="font-weight:600;font-size:14px;margin:0 0 2px;color:#1e293b">${store.name}</p>
+            <p style="font-size:12px;color:#64748b;margin:0 0 6px">${store.district}${store.category ? " · " + store.category.name : ""}</p>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a href="/stores/${store.slug}" style="font-size:12px;color:#2563EB;text-decoration:none;font-weight:600">Ver tienda →</a>
+              ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\D/g, "")}" target="_blank" style="font-size:12px;color:#16a34a;text-decoration:none;font-weight:600">WhatsApp</a>` : ""}
+            </div>
+          </div>
+        `);
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([lng, lat])
+        .setPopup(popup)
+        .addTo(map);
+
+      el.addEventListener("click", () => {
+        onStoreClick?.(store);
       });
 
-      const marker = L.marker([lat, lng], { icon }).addTo(map);
-      marker.bindPopup(buildPopupHtml(store), { maxWidth: 220 });
-
-      if (isHighlighted) marker.openPopup();
-
-      marker.on("click", () => { onStoreClick?.(store); });
+      if (isHighlighted) {
+        marker.togglePopup();
+      }
 
       markersRef.current.set(store.id, marker);
     });
 
-    // Fit bounds to visible markers
-    if (validStores.length > 1) {
-      const group = L.featureGroup(Array.from(markersRef.current.values()));
-      if (group.getBounds().isValid()) {
-        map.fitBounds(group.getBounds().pad(0.15));
+    if (highlightedStoreId) {
+      const hs = validStores.find(s => s.id === highlightedStoreId);
+      if (hs) {
+        const lat = parseFloat(String(hs.lat));
+        const lng = parseFloat(String(hs.lng));
+        map.flyTo({ center: [lng, lat], zoom: 17 });
       }
+    } else if (validStores.length > 1) {
+      const bounds = new mapboxgl.LngLatBounds();
+      validStores.forEach(s => {
+        bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]);
+      });
+      map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
     } else if (validStores.length === 1) {
       const s = validStores[0];
-      map.setView([parseFloat(s.lat!), parseFloat(s.lng!)], 16);
-    } else if (!mapCenter) {
-      map.setView(SAN_RAMON_CENTER, zoom);
+      map.flyTo({ center: [parseFloat(String(s.lng)), parseFloat(String(s.lat))], zoom: 15 });
     }
-
-    // Center on highlighted store
-    if (highlighted) {
-      const hs = validStores.find(s => s.id === highlighted);
-      if (hs?.lat && hs?.lng) {
-        map.setView([parseFloat(hs.lat), parseFloat(hs.lng)], 17);
-      }
-    }
-  }
+  }, [stores, highlightedStoreId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="relative w-full h-full flex-1">
-      <div ref={containerRef} className="absolute inset-0" />
+    <div className={`relative ${className}`} style={{ minHeight: "400px" }}>
+      <div ref={containerRef} className="absolute inset-0" style={{ borderRadius: "12px", overflow: "hidden" }} />
     </div>
   );
 }
