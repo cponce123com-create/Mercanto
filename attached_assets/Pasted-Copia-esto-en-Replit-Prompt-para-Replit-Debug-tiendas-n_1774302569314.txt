@@ -1,0 +1,110 @@
+Copia esto en Replit:
+
+
+Prompt para Replit — Debug tiendas no aparecen en el mapa:
+El mapa de Mapbox carga correctamente pero los pins de las tiendas no aparecen. Necesito que diagnostiques y corrijas el problema siguiendo estos pasos:
+1. Verifica qué datos está recibiendo el componente StoreMap
+Agrega este log temporal justo antes del useEffect que agrega los markers:
+tsconsole.log("Stores recibidas por StoreMap:", stores);
+console.log("Total stores:", stores.length);
+console.log("Stores con coords:", stores.filter(s => s.lat && s.lng).length);
+Esto va a revelar tres casos posibles:
+
+Si stores es un array vacío [] → el problema está en el fetch de datos, no en el mapa
+Si stores tiene datos pero ninguno tiene lat/lng → las tiendas no tienen coordenadas guardadas en la DB
+Si stores tiene datos con lat/lng → el problema está en cómo se crean los markers
+
+2. Si el array de stores llega vacío — verifica la llamada al API
+Revisa la página del mapa (src/pages/map.tsx o donde se consuma el endpoint). Busca el fetch o query que obtiene las tiendas para el mapa y agrega un log:
+tsconsole.log("Respuesta del API de tiendas para mapa:", data);
+Abre DevTools → Network y busca la llamada a /api/stores/map o /api/stores. Verifica:
+
+Que la llamada se está haciendo (si no aparece, el useQuery no se está ejecutando)
+Que devuelve 200 y un array con tiendas
+Que las tiendas en la respuesta tienen los campos lat y lng con valores numéricos reales (no null)
+
+3. Si las tiendas no tienen lat/lng en la DB
+Es probable que las tiendas de prueba fueron creadas sin coordenadas. Corre el script que ya existe en el proyecto para corregir coordenadas:
+bashcd scripts && npx tsx src/fix-coords.ts
+Si ese script no funciona o no existe, ejecuta este query directo para ver cuántas tiendas tienen coords:
+bashnpx tsx -e "
+import { db, storesTable } from '@workspace/db';
+import { isNotNull, eq } from 'drizzle-orm';
+const total = await db.select().from(storesTable).where(eq(storesTable.status, 'active'));
+const conCoords = total.filter(s => s.lat && s.lng);
+console.log('Total activas:', total.length);
+console.log('Con coords:', conCoords.length);
+console.log('Sin coords:', total.length - conCoords.length);
+process.exit(0);
+"
+4. Si las tiendas tienen datos pero el segundo useEffect no se ejecuta
+El problema más común es que el mapa aún no está listo cuando llegan los datos de las tiendas. El useEffect que agrega los markers depende de map.current pero Mapbox necesita que el mapa termine de cargar su estilo antes de que se puedan agregar elementos. Reemplaza el useEffect que itera sobre stores por esta versión que espera al evento load del mapa:
+tsuseEffect(() => {
+  if (!map.current || !stores.length) return;
+
+  const addMarkers = () => {
+    markers.current.forEach(m => m.remove());
+    markers.current = [];
+
+    stores.forEach(store => {
+      const lat = parseFloat(String(store.lat));
+      const lng = parseFloat(String(store.lng));
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      const el = document.createElement("div");
+      el.innerHTML = `
+        <div style="
+          background:#2563EB;color:#fff;border-radius:50%;
+          width:36px;height:36px;display:flex;align-items:center;
+          justify-content:center;font-size:16px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.25);
+          border:2px solid #fff;cursor:pointer;
+        ">${store.category?.icon || "🏪"}</div>
+      `;
+
+      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "220px" })
+        .setHTML(`
+          <div style="font-family:sans-serif;padding:4px">
+            <p style="font-weight:600;font-size:14px;margin:0 0 2px">${store.name}</p>
+            <p style="font-size:12px;color:#666;margin:0 0 6px">${store.district || ""} ${store.category ? "· " + store.category.name : ""}</p>
+            <div style="display:flex;gap:6px">
+              <a href="/stores/${store.slug}" style="font-size:12px;color:#2563EB;text-decoration:none;font-weight:500">Ver tienda →</a>
+              ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp}" target="_blank" style="font-size:12px;color:#16a34a;text-decoration:none;font-weight:500">WhatsApp</a>` : ""}
+            </div>
+          </div>
+        `);
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([lng, lat])
+        .setPopup(popup)
+        .addTo(map.current!);
+
+      markers.current.push(marker);
+    });
+
+    if (stores.length > 0) {
+      const valid = stores.filter(s => !isNaN(parseFloat(String(s.lat))) && !isNaN(parseFloat(String(s.lng))));
+      if (valid.length > 1) {
+        const bounds = new mapboxgl.LngLatBounds();
+        valid.forEach(s => bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]));
+        map.current!.fitBounds(bounds, { padding: 60, maxZoom: 15 });
+      } else if (valid.length === 1) {
+        map.current!.flyTo({ center: [parseFloat(String(valid[0].lng)), parseFloat(String(valid[0].lat))], zoom: 15 });
+      }
+    }
+  };
+
+  if (map.current.isStyleLoaded()) {
+    addMarkers();
+  } else {
+    map.current.once("load", addMarkers);
+  }
+}, [stores]);
+5. Verificación final
+Después de aplicar el fix, confirma en consola que:
+
+Los logs del paso 1 muestran stores con lat/lng válidos
+Los markers aparecen en el mapa
+Al hacer click en un marker se abre el popup con el nombre de la tienda y el link
+
+Elimina todos los console.log temporales que agregaste una vez que todo funcione.
