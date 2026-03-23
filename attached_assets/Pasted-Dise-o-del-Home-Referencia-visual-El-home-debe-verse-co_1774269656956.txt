@@ -1,0 +1,95 @@
+Diseño del Home — Referencia visual
+El home debe verse como un marketplace moderno tipo MercadoLibre adaptado a lo local. Aquí el detalle exacto de cada sección de arriba hacia abajo:
+
+Header fijo
+
+Logo Mercanto con ícono "M" en rojo a la izquierda
+Buscador central grande con placeholder "¿Qué estás buscando?" y botón azul con ícono de lupa
+A la derecha: ícono de Favoritos (corazón) e ícono de Mi Cuenta (persona), ambos con etiqueta de texto debajo
+Fondo blanco con sombra suave
+
+Selector de distrito destacado
+
+Debajo del header, centrado, texto grande: "Compra en tu Distrito: San Ramón ▼" donde "San Ramón" va en color rojo/naranja y es clickeable para abrir el dropdown de distritos
+Subtítulo pequeño en gris: "Productos cerca de ti para recoger en tienda"
+
+Banner principal rotativo
+
+Banner grande a ancho completo con fondo degradado naranja/rojo
+Texto grande en blanco: "Ofertas de la Semana" con subtítulo "¡Descuentos Imperdibles!"
+Badge con "-50%" en rojo
+Imagen decorativa de productos (frutas, ropa, tecnología) a la derecha
+Dots de navegación abajo para cambiar entre banners
+Auto-rotación cada 4 segundos
+
+Banners de categorías destacadas (3 columnas)
+
+Tres banners rectangulares con foto de fondo oscurecida y texto blanco encima
+Categorías sugeridas para Chanchamayo: "Café y Productos del Campo", "Artesanía Local", "Abarrotes y Bodega"
+Al hacer click filtra la página de tiendas por esa categoría
+
+Categorías populares
+
+Título "Categorías Populares" centrado
+Fila horizontal scrolleable en móvil con iconos grandes (emoji o ilustración) y nombre debajo
+Mostrar las primeras 8 categorías más populares
+Al hacer click navega a /stores?category=slug
+
+Tiendas destacadas
+
+Título "Tiendas Destacadas" alineado a la izquierda
+Grid de 4 columnas en desktop, 2 en móvil
+Cada card: foto/banner de la tienda, nombre, botón azul "Ver Tienda"
+Solo muestra tiendas con is_featured = true
+Link "Ver todas las tiendas →" al final
+
+Ofertas cercanas (productos con precio oferta)
+
+Título "Ofertas Cercanas" alineado a la izquierda
+Grid de 4 columnas en desktop, 2 en móvil
+Cada card: foto del producto, badge rojo "Oferta" en esquina superior, nombre, precio en verde/azul grande con formato S/ 00.00
+Solo muestra productos que tengan offer_price definido, del distrito seleccionado
+Al hacer click navega al detalle de la tienda
+
+Sección del mapa ⭐
+
+Título "Descubre Tiendas Cerca de Ti"
+Subtítulo: "Encuentra comercios en tu distrito en el mapa interactivo"
+Preview del mapa de Google Maps con altura fija (400px) mostrando los marcadores de tiendas activas, centrado en San Ramón
+El mapa es interactivo directamente en el home (no solo decorativo)
+Botón "Ver mapa completo →" que navega a /map
+
+Banners promocionales dobles
+
+Dos banners lado a lado de ancho completo
+Izquierdo: fondo naranja, ícono de regalo, texto "Promociones Especiales — ¡No te las pierdas!"
+Derecho: fondo azul, ícono de check, texto "Compra Fácil y Seguro en tu Distrito"
+
+Footer
+
+Logo y descripción corta de Mercanto
+Links: Inicio, Tiendas, Mapa, Sobre Nosotros
+Texto: "© 2024 Mercanto — San Ramón, Chanchamayo, Junín"
+
+
+Paleta de colores
+Primario:     #2563EB  (azul)
+Secundario:   #EF4444  (rojo para el logo y distrito)
+Acento:       #F97316  (naranja para banners y ofertas)
+Precio:       #16A34A  (verde para precios)
+Fondo:        #F8FAFC  (gris muy claro)
+Cards:        #FFFFFF  (blanco)
+Texto:        #1E293B  (gris oscuro)
+Tipografía
+
+Fuente: Inter (Google Fonts)
+Títulos de sección: 20-24px bold
+Nombres de tienda/producto: 14-16px semibold
+Precios: 18px bold en verde
+Texto secundario: 12-14px en gris
+
+Comportamiento responsive
+
+Desktop (1280px+): layout completo con 4 columnas
+Tablet (768px): 2 columnas en grids, buscador completo
+Móvil (< 768px): 1-2 columnas, categorías en scroll horizontal, buscador ocupa todo el ancho, header simplificado
