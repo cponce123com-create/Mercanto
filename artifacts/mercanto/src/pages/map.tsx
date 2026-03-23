@@ -191,7 +191,7 @@ export default function MapPage() {
             </div>
           ) : (
             <StoreMap
-              stores={filteredStores.length > 0 ? filteredStores : validStores}
+              stores={filteredStores}
               highlightedStoreId={selectedStore ?? highlightedId}
               onStoreClick={(s) => setSelectedStore(s.id)}
               className="w-full h-full flex-1"
