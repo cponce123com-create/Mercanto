@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "mercanto-dev-secret-2024";
 
@@ -46,24 +48,75 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  await requireAuth(req, res, () => {
-    if ((req as any).userRole !== "admin") {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized", message: "No token provided" });
+    return;
+  }
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    res.status(401).json({ error: "Unauthorized", message: "Invalid token" });
+    return;
+  }
+
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id, role: usersTable.role, isBlocked: usersTable.isBlocked })
+      .from(usersTable)
+      .where(eq(usersTable.id, decoded.userId))
+      .limit(1);
+
+    if (!user || user.isBlocked) {
+      res.status(401).json({ error: "Unauthorized", message: "User not found or blocked" });
+      return;
+    }
+    if (user.role !== "admin") {
       res.status(403).json({ error: "Forbidden", message: "Admin only" });
       return;
     }
+
+    (req as any).userId = user.id;
+    (req as any).userRole = user.role;
     next();
-  });
+  } catch {
+    res.status(500).json({ error: "Internal Server Error", message: "Auth check failed" });
+  }
 }
 
 export async function requireVendor(req: Request, res: Response, next: NextFunction) {
-  await requireAuth(req, res, () => {
-    const role = (req as any).userRole;
-    if (role !== "vendor" && role !== "admin") {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    res.status(401).json({ error: "Unauthorized", message: "No token provided" });
+    return;
+  }
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    res.status(401).json({ error: "Unauthorized", message: "Invalid token" });
+    return;
+  }
+
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id, role: usersTable.role, isBlocked: usersTable.isBlocked })
+      .from(usersTable)
+      .where(eq(usersTable.id, decoded.userId))
+      .limit(1);
+
+    if (!user || user.isBlocked) {
+      res.status(401).json({ error: "Unauthorized", message: "User not found or blocked" });
+      return;
+    }
+    if (user.role !== "vendor" && user.role !== "admin") {
       res.status(403).json({ error: "Forbidden", message: "Vendor only" });
       return;
     }
+
+    (req as any).userId = user.id;
+    (req as any).userRole = user.role;
     next();
-  });
+  } catch {
+    res.status(500).json({ error: "Internal Server Error", message: "Auth check failed" });
+  }
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
