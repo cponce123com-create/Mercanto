@@ -30,9 +30,51 @@ app.use(
 
 app.use(helmet());
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "http://localhost:5173";
+// Build the list of allowed origins from env vars
+function buildAllowedOrigins(): string[] {
+  const origins: string[] = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:4173",
+  ];
+
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (frontendUrl) {
+    frontendUrl.split(",").forEach(o => {
+      const trimmed = o.trim();
+      if (trimmed) origins.push(trimmed);
+    });
+  }
+
+  const replitDomain = process.env.REPLIT_DEV_DOMAIN;
+  if (replitDomain) {
+    origins.push(`https://${replitDomain}`);
+  }
+
+  return origins;
+}
+
+const allowedOrigins = buildAllowedOrigins();
+
 app.use(cors({
-  origin: ALLOWED_ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, server-to-server, Vite proxy, etc.)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else if (
+      origin.endsWith(".replit.dev") ||
+      origin.endsWith(".repl.co") ||
+      origin.endsWith(".replit.app")
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin not allowed: ${origin}`));
+    }
+  },
   credentials: true,
 }));
 
