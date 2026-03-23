@@ -51,24 +51,29 @@ export function StoreMap({
       ? [center[1], center[0]]
       : [SAN_RAMON_CENTER[1], SAN_RAMON_CENTER[0]];
 
-    mapRef.current = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: mapCenter,
-      zoom,
-    });
+    const timer = setTimeout(() => {
+      if (!containerRef.current || mapRef.current) return;
 
-    mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-    mapRef.current.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: false,
-        showUserHeading: false,
-      }),
-      "top-right",
-    );
+      mapRef.current = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: mapCenter,
+        zoom,
+      });
+
+      mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+      mapRef.current.addControl(
+        new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: false,
+          showUserHeading: false,
+        }),
+        "top-right",
+      );
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       markersRef.current.forEach(m => m.remove());
       markersRef.current.clear();
       mapRef.current?.remove();
@@ -80,87 +85,98 @@ export function StoreMap({
     const map = mapRef.current;
     if (!map) return;
 
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current.clear();
+    const addMarkers = () => {
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current.clear();
 
-    const validStores = stores.filter(s => {
-      const lat = parseFloat(String(s.lat));
-      const lng = parseFloat(String(s.lng));
-      return !isNaN(lat) && !isNaN(lng);
-    });
+      const validStores = stores.filter(s => {
+        const lat = parseFloat(String(s.lat));
+        const lng = parseFloat(String(s.lng));
+        return !isNaN(lat) && !isNaN(lng);
+      });
 
-    validStores.forEach(store => {
-      const lat = parseFloat(String(store.lat));
-      const lng = parseFloat(String(store.lng));
-      const isHighlighted = store.id === highlightedStoreId;
+      validStores.forEach(store => {
+        const lat = parseFloat(String(store.lat));
+        const lng = parseFloat(String(store.lng));
+        const isHighlighted = store.id === highlightedStoreId;
 
-      const el = document.createElement("div");
-      el.className = "store-marker";
-      el.innerHTML = `
-        <div style="
-          background:${isHighlighted ? '#EF4444' : '#2563EB'};
-          color:#fff;
-          border-radius:50%;
-          width:36px;height:36px;
-          display:flex;align-items:center;justify-content:center;
-          font-size:16px;
-          box-shadow:0 2px 8px rgba(0,0,0,0.25);
-          border:2px solid #fff;
-          cursor:pointer;
-          transition:transform 0.15s ease;
-        ">${store.category?.icon || "🏪"}</div>
-      `;
+        const el = document.createElement("div");
+        el.className = "store-marker";
+        el.innerHTML = `
+          <div style="
+            background:${isHighlighted ? '#EF4444' : '#2563EB'};
+            color:#fff;
+            border-radius:50%;
+            width:36px;height:36px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:16px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            border:2px solid #fff;
+            cursor:pointer;
+            transition:transform 0.15s ease;
+          ">${store.category?.icon || "🏪"}</div>
+        `;
 
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "220px" })
-        .setHTML(`
-          <div style="font-family:sans-serif;padding:4px">
-            <p style="font-weight:600;font-size:14px;margin:0 0 2px;color:#1e293b">${store.name}</p>
-            <p style="font-size:12px;color:#64748b;margin:0 0 6px">${store.district}${store.category ? " · " + store.category.name : ""}</p>
-            <div style="display:flex;gap:8px;align-items:center">
-              <a href="/stores/${store.slug}" style="font-size:12px;color:#2563EB;text-decoration:none;font-weight:600">Ver tienda →</a>
-              ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\D/g, "")}" target="_blank" style="font-size:12px;color:#16a34a;text-decoration:none;font-weight:600">WhatsApp</a>` : ""}
+        const popup = new mapboxgl.Popup({ offset: 25, closeButton: false, maxWidth: "220px" })
+          .setHTML(`
+            <div style="font-family:sans-serif;padding:4px">
+              <p style="font-weight:600;font-size:14px;margin:0 0 2px;color:#1e293b">${store.name}</p>
+              <p style="font-size:12px;color:#64748b;margin:0 0 6px">${store.district}${store.category ? " · " + store.category.name : ""}</p>
+              <div style="display:flex;gap:8px;align-items:center">
+                <a href="/stores/${store.slug}" style="font-size:12px;color:#2563EB;text-decoration:none;font-weight:600">Ver tienda →</a>
+                ${store.whatsapp ? `<a href="https://wa.me/${store.whatsapp.replace(/\D/g, "")}" target="_blank" style="font-size:12px;color:#16a34a;text-decoration:none;font-weight:600">WhatsApp</a>` : ""}
+              </div>
             </div>
-          </div>
-        `);
+          `);
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([lng, lat])
-        .setPopup(popup)
-        .addTo(map);
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .setPopup(popup)
+          .addTo(map);
 
-      el.addEventListener("click", () => {
-        onStoreClick?.(store);
+        el.addEventListener("click", () => {
+          onStoreClick?.(store);
+        });
+
+        if (isHighlighted) {
+          marker.togglePopup();
+        }
+
+        markersRef.current.set(store.id, marker);
       });
 
-      if (isHighlighted) {
-        marker.togglePopup();
+      if (highlightedStoreId) {
+        const hs = validStores.find(s => s.id === highlightedStoreId);
+        if (hs) {
+          const lat = parseFloat(String(hs.lat));
+          const lng = parseFloat(String(hs.lng));
+          map.flyTo({ center: [lng, lat], zoom: 17 });
+        }
+      } else if (validStores.length > 1) {
+        const bounds = new mapboxgl.LngLatBounds();
+        validStores.forEach(s => {
+          bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]);
+        });
+        map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
+      } else if (validStores.length === 1) {
+        const s = validStores[0];
+        map.flyTo({ center: [parseFloat(String(s.lng)), parseFloat(String(s.lat))], zoom: 15 });
       }
+    };
 
-      markersRef.current.set(store.id, marker);
-    });
-
-    if (highlightedStoreId) {
-      const hs = validStores.find(s => s.id === highlightedStoreId);
-      if (hs) {
-        const lat = parseFloat(String(hs.lat));
-        const lng = parseFloat(String(hs.lng));
-        map.flyTo({ center: [lng, lat], zoom: 17 });
-      }
-    } else if (validStores.length > 1) {
-      const bounds = new mapboxgl.LngLatBounds();
-      validStores.forEach(s => {
-        bounds.extend([parseFloat(String(s.lng)), parseFloat(String(s.lat))]);
-      });
-      map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
-    } else if (validStores.length === 1) {
-      const s = validStores[0];
-      map.flyTo({ center: [parseFloat(String(s.lng)), parseFloat(String(s.lat))], zoom: 15 });
+    if (map.loaded()) {
+      addMarkers();
+    } else {
+      map.once("load", addMarkers);
     }
   }, [stores, highlightedStoreId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (webGLError) {
     return (
-      <div className={`relative ${className} flex flex-col items-center justify-center gap-3 bg-gray-50 border border-gray-200 rounded-xl`} style={{ minHeight: "400px" }}>
+      <div
+        className={`${className} flex flex-col items-center justify-center gap-3 bg-gray-50 border border-gray-200 rounded-xl`}
+        style={{ minHeight: "400px" }}
+      >
         <MapPin className="w-10 h-10 text-gray-300" />
         <p className="text-sm text-gray-500 font-medium">El mapa no está disponible en este navegador</p>
         <p className="text-xs text-gray-400">Prueba con Chrome, Firefox o Safari actualizado</p>
@@ -169,8 +185,10 @@ export function StoreMap({
   }
 
   return (
-    <div className={`relative ${className}`} style={{ minHeight: "400px" }}>
-      <div ref={containerRef} className="absolute inset-0" style={{ borderRadius: "12px", overflow: "hidden" }} />
-    </div>
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ minHeight: "400px", borderRadius: "12px", overflow: "hidden" }}
+    />
   );
 }

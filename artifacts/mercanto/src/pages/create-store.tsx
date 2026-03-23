@@ -207,6 +207,15 @@ export default function CreateStore() {
     miniMapInstanceRef.current.flyTo({ center: [coords.lng, coords.lat], zoom: 16 });
   }, [coords]);
 
+  useEffect(() => {
+    if (step !== 4) return;
+    const timer = setTimeout(() => {
+      const defaultCoords = coords ?? SAN_RAMON_CENTER;
+      initMiniMap(defaultCoords.lat, defaultCoords.lng);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const requestGPS = () => {
     if (!navigator.geolocation) { toast.error("Tu navegador no soporta geolocalización"); return; }
     setGpsStatus("loading");

@@ -1,0 +1,40 @@
+El mapa de Mapbox no se renderiza, sale página en blanco. Necesito que diagnostiques y corrijas el problema siguiendo estos pasos en orden:
+1. Verifica el token de Mapbox
+Revisa si VITE_MAPBOX_TOKEN está definido en las variables de entorno de Replit. Agrega este log temporal al componente del mapa, justo antes de crear el new mapboxgl.Map(...):
+tsconsole.log("Mapbox token:", import.meta.env.VITE_MAPBOX_TOKEN ? "OK" : "MISSING");
+Si sale MISSING, el problema es que Vite no está leyendo la variable. Verifica que en Replit la variable se llama exactamente VITE_MAPBOX_TOKEN (con ese prefijo VITE_ que es obligatorio para que Vite la exponga al frontend).
+2. Verifica que el contenedor del mapa tiene altura
+Mapbox necesita que el div contenedor tenga altura explícita definida — si el div mide 0px de alto, el mapa no renderiza nada. Asegúrate de que el componente StoreMap y su contenedor padre tienen altura explícita. El div del mapa debe tener:
+tsx<div ref={mapContainer} style={{ width: "100%", height: "500px" }} />
+Y el componente padre que lo envuelve también necesita tener altura. Si está dentro de un flex o grid, agrega flex-1 o h-full según corresponda. Revisa la página del mapa y todos sus contenedores padres hasta el layout raíz.
+3. Verifica que el CSS de Mapbox se está cargando
+Sin el CSS de Mapbox el mapa aparece en blanco aunque el token sea correcto. Abre las DevTools del navegador, ve a la pestaña Network y busca mapbox-gl.css. Si no aparece, el import no está funcionando. Verifica que en el CSS global (index.css o main.css) el import está exactamente así:
+css@import 'mapbox-gl/dist/mapbox-gl.css';
+Si el archivo CSS global usa @tailwind directives, el @import de Mapbox debe ir antes de cualquier línea @tailwind. Si no funciona con @import, como alternativa agrégalo directamente en artifacts/mercanto/index.html:
+html<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet" />
+4. Verifica errores en consola
+Abre las DevTools del navegador y revisa la pestaña Console. Busca cualquier error que mencione mapbox, token, gl, WebGL o canvas. Los errores más comunes son:
+
+"An API access token is required" → el token no llega, problema del paso 1
+"Failed to initialize WebGL" → el navegador no soporta WebGL (raro, pero prueba en Chrome)
+"Map container not found" → el ref no está apuntando al div correcto
+Errores de CORS → el token es inválido o expiró
+
+Dime exactamente qué error aparece en consola y lo corregimos.
+5. Si todo lo anterior está bien pero sigue en blanco
+El problema puede ser que el mapa se inicializa antes de que el div esté montado en el DOM. Cambia el useEffect de inicialización del mapa para que espere un tick:
+tsuseEffect(() => {
+  if (!mapContainer.current) return;
+  const timer = setTimeout(() => {
+    if (!mapContainer.current || map.current) return;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [centerLng, centerLat],
+      zoom,
+    });
+    // ... resto de la inicialización
+  }, 100);
+  return () => clearTimeout(timer);
+}, []);
+Aplica los fixes que correspondan según lo que encuentres y confirma que el mapa renderiza correctamente tanto en la página /map como en el mini mapa de creación de tienda.
