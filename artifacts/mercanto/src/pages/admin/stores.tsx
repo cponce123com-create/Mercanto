@@ -6,14 +6,19 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAdminListStoresQueryKey } from "@workspace/api-client-react";
 import { toast } from "sonner";
-import { Check, X, Star, ExternalLink, Loader2, Search } from "lucide-react";
+import { Check, X, Star, ExternalLink, Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { Link } from "wouter";
 
 export default function AdminStores() {
   const [status, setStatus] = useState<string>("all");
-  const { data, isLoading } = useAdminListStores({ status: status !== 'all' ? status : undefined });
+  const [page, setPage] = useState(1);
+  const { data, isLoading } = useAdminListStores({
+    status: status !== 'all' ? status : undefined,
+    page,
+    limit: 50,
+  });
   const queryClient = useQueryClient();
 
   const statusMutation = useAdminUpdateStoreStatus({
@@ -34,14 +39,28 @@ export default function AdminStores() {
   });
 
   const stores = data?.stores || [];
+  const totalPages = data?.totalPages ?? 1;
+  const total = data?.total ?? 0;
+
+  const handleStatusChange = (val: string) => {
+    setStatus(val);
+    setPage(1);
+  };
 
   return (
     <DashboardLayout role="admin">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <h1 className="text-3xl font-display font-bold">Gestión de Tiendas</h1>
+          <div>
+            <h1 className="text-3xl font-display font-bold">Gestión de Tiendas</h1>
+            {!isLoading && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {total} tienda{total !== 1 ? 's' : ''} en total
+              </p>
+            )}
+          </div>
           
-          <Select value={status} onValueChange={setStatus}>
+          <Select value={status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-[180px] bg-white">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
@@ -133,6 +152,32 @@ export default function AdminStores() {
             </Table>
           )}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-muted-foreground">
+              Página {page} de {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

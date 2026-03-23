@@ -33,9 +33,9 @@ router.get("/stats", async (req, res) => {
 
 router.get("/stores", async (req, res) => {
   try {
-    const { status, page: pageStr } = req.query as Record<string, string>;
+    const { status, page: pageStr, limit: limitStr } = req.query as Record<string, string>;
     const page = Math.max(1, parseInt(pageStr || "1"));
-    const limit = 20;
+    const limit = Math.min(100, parseInt(limitStr || "50"));
     const offset = (page - 1) * limit;
 
     let query = db.select({

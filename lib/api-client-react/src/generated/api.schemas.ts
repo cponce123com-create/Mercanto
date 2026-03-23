@@ -337,6 +337,7 @@ export const GlobalSearchType = {
 export type AdminListStoresParams = {
   status?: string;
   page?: number;
+  limit?: number;
 };
 
 export type AdminListUsersParams = {

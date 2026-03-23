@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useSearch } from "wouter";
 import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -8,7 +8,9 @@ import { StoreCard } from "@/components/shared/StoreCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+
+const PAGE_SIZE = 24;
 
 export default function StoresDirectory() {
   const { district } = useDistrict();
@@ -17,25 +19,35 @@ export default function StoresDirectory() {
   const initialCategory = searchParams.get("category") || "all";
 
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState<"newest" | "name" | "visits">("newest");
-
-  // Simple manual debounce for search
-  useState(() => {
-    const handler = setTimeout(() => setDebouncedSearch(search), 500);
-    return () => clearTimeout(handler);
-  });
+  const [page, setPage] = useState(1);
 
   const { data: categories } = useListCategories();
   
   const { data, isLoading } = useListStores({
     district: district !== 'all' ? district : undefined,
     category: category !== 'all' ? category : undefined,
-    search: debouncedSearch || undefined,
+    search: search || undefined,
     sort,
-    limit: 20
+    page,
+    limit: PAGE_SIZE,
   });
+
+  const stores = data?.stores ?? [];
+  const totalPages = data?.totalPages ?? 1;
+  const total = data?.total ?? 0;
+
+  const resetFilters = () => {
+    setSearch('');
+    setCategory('all');
+    setPage(1);
+  };
+
+  const handleFilterChange = (fn: () => void) => {
+    fn();
+    setPage(1);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -50,12 +62,12 @@ export default function StoresDirectory() {
                 placeholder="Buscar tiendas..." 
                 className="pl-9 bg-secondary/30 border-transparent focus-visible:ring-primary"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleFilterChange(() => setSearch(e.target.value))}
               />
             </div>
             
             <div className="flex w-full md:w-auto gap-3 overflow-x-auto pb-1 md:pb-0">
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(v) => handleFilterChange(() => setCategory(v))}>
                 <SelectTrigger className="w-[180px] bg-secondary/30 border-transparent shrink-0">
                   <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
@@ -67,7 +79,7 @@ export default function StoresDirectory() {
                 </SelectContent>
               </Select>
 
-              <Select value={sort} onValueChange={(v: any) => setSort(v)}>
+              <Select value={sort} onValueChange={(v: any) => handleFilterChange(() => setSort(v))}>
                 <SelectTrigger className="w-[160px] bg-secondary/30 border-transparent shrink-0">
                   <SlidersHorizontal className="w-4 h-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Ordenar por" />
@@ -84,30 +96,80 @@ export default function StoresDirectory() {
       </div>
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-bold">Directorio de Comercios</h1>
-          <p className="text-muted-foreground mt-2">
-            Mostrando resultados para <strong className="text-foreground">{district}</strong>
-            {category !== 'all' && categories && ` en ${categories.find(c => c.slug === category)?.name}`}
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <h1 className="text-3xl font-display font-bold">Directorio de Comercios</h1>
+            <p className="text-muted-foreground mt-2">
+              {isLoading ? (
+                "Cargando tiendas..."
+              ) : (
+                <>
+                  <strong className="text-foreground">{total}</strong> tienda{total !== 1 ? 's' : ''} en{' '}
+                  <strong className="text-foreground">{district === 'all' ? 'Chanchamayo' : district}</strong>
+                  {category !== 'all' && categories && ` · ${categories.find(c => c.slug === category)?.name}`}
+                </>
+              )}
+            </p>
+          </div>
+          {totalPages > 1 && (
+            <p className="text-sm text-muted-foreground shrink-0">
+              Página {page} de {totalPages}
+            </p>
+          )}
         </div>
 
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
           </div>
-        ) : data?.stores && data.stores.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {data.stores.map((store) => (
-              <StoreCard key={store.id} store={store} />
-            ))}
-          </div>
+        ) : stores.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {stores.map((store) => (
+                <StoreCard key={store.id} store={store} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-10">
+                <Button
+                  variant="outline"
+                  onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                </Button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <Button
+                      key={p}
+                      variant={p === page ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9 p-0"
+                      onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    >
+                      {p}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => { setPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page >= totalPages}
+                >
+                  Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
             <div className="text-5xl mb-4">🔍</div>
             <h3 className="text-xl font-medium mb-2">No se encontraron tiendas</h3>
             <p className="text-muted-foreground">Intenta ajustando los filtros de búsqueda o cambia de distrito.</p>
-            <Button variant="outline" className="mt-6" onClick={() => { setSearch(''); setCategory('all'); }}>
+            <Button variant="outline" className="mt-6" onClick={resetFilters}>
               Limpiar filtros
             </Button>
           </div>
