@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -8,12 +8,13 @@ import { StoreCard } from "@/components/shared/StoreCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 
 const PAGE_SIZE = 24;
 
 export default function StoresDirectory() {
   const { district } = useDistrict();
+  const [, navigate] = useLocation();
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const initialCategory = searchParams.get("category") || "all";
@@ -90,6 +91,18 @@ export default function StoresDirectory() {
                   <SelectItem value="name">Alfabético</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button
+                variant="outline"
+                className="shrink-0 gap-2 bg-primary/5 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  const districtParam = district !== 'all' ? `?district=${encodeURIComponent(district)}` : '';
+                  navigate(`/map${districtParam}`);
+                }}
+              >
+                <MapPin className="w-4 h-4" />
+                <span className="hidden sm:inline">Ver en mapa</span>
+              </Button>
             </div>
           </div>
         </div>

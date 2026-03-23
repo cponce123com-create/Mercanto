@@ -1,4 +1,4 @@
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import {
   useGetStoreBySlug, useIncrementStoreVisit,
   useGetStoreReviews, useCreateReview, useDeleteReview,
@@ -425,6 +425,17 @@ export default function StoreDetail() {
                   >
                     <Phone className="w-5 h-5" /> Contactar por WhatsApp
                   </Button>
+                  {store.lat && store.lng && (
+                    <Link href={`/map?district=${encodeURIComponent(store.district)}&storeId=${store.id}`}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="h-12 rounded-xl gap-2 w-full border-primary/30 text-primary hover:bg-primary/5"
+                      >
+                        <MapPin className="w-5 h-5" /> Ubica en el mapa
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
 

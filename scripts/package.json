@@ -11,6 +11,7 @@
     "check-db": "tsx ./src/check-db.ts",
     "seed-san-ramon": "tsx ./src/seed-san-ramon.ts",
     "fix-offers": "tsx ./src/fix-offers.ts",
+    "fix-coords": "tsx ./src/fix-coords.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
