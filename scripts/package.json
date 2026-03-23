@@ -10,6 +10,7 @@
     "fix-admin": "tsx ./src/fix-admin.ts",
     "check-db": "tsx ./src/check-db.ts",
     "seed-san-ramon": "tsx ./src/seed-san-ramon.ts",
+    "fix-offers": "tsx ./src/fix-offers.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
