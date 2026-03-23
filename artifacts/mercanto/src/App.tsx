@@ -18,6 +18,7 @@ import VendorDashboard from "@/pages/vendor/dashboard";
 import VendorProducts from "@/pages/vendor/products";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStores from "@/pages/admin/stores";
+import AdminStoreDetail from "@/pages/admin/store-detail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +47,7 @@ function Router() {
       
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/stores" component={AdminStores} />
+      <Route path="/admin/stores/:id" component={AdminStoreDetail} />
       
       <Route component={NotFound} />
     </Switch>

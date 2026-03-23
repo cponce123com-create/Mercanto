@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAdminListStoresQueryKey } from "@workspace/api-client-react";
 import { toast } from "sonner";
-import { Check, X, Star, ExternalLink, Loader2 } from "lucide-react";
+import { Check, X, Star, ExternalLink, Loader2, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -100,19 +100,22 @@ export default function AdminStores() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 gap-1" asChild title="Auditar tienda">
+                          <Link href={`/admin/stores/${store.id}`}><Search className="w-3.5 h-3.5" /> Auditar</Link>
+                        </Button>
                         <Button variant="ghost" size="icon" asChild title="Ver público">
                           <Link href={`/stores/${store.slug}`}><ExternalLink className="w-4 h-4 text-muted-foreground" /></Link>
                         </Button>
                         {store.status !== 'active' && (
-                          <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10" 
+                          <Button variant="outline" size="sm" className="text-green-700 border-green-200 hover:bg-green-50" 
                             onClick={() => statusMutation.mutate({ id: store.id, data: { status: "active" } })}>
-                            <Check className="w-4 h-4 mr-1" /> Aprobar
+                            <Check className="w-4 h-4 mr-1" /> Activar
                           </Button>
                         )}
-                        {store.status !== 'rejected' && (
+                        {store.status === 'active' && (
                           <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10"
                             onClick={() => statusMutation.mutate({ id: store.id, data: { status: "rejected" } })}>
-                            <X className="w-4 h-4 mr-1" /> Rechazar
+                            <X className="w-4 h-4 mr-1" /> Suspender
                           </Button>
                         )}
                       </div>

@@ -19,6 +19,7 @@ const schema = z.object({
 export default function Login() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect");
   
   const form = useForm<LoginRequest>({
     resolver: zodResolver(schema),
@@ -30,7 +31,8 @@ export default function Login() {
       onSuccess: (data) => {
         queryClient.setQueryData(getAuthMeQueryKey(), data.user);
         toast.success("¡Bienvenido de vuelta!");
-        setLocation(data.user.role === 'vendor' ? '/vendor' : (data.user.role === 'admin' ? '/admin' : '/'));
+        const dest = redirectTo || (data.user.role === 'vendor' ? '/vendor' : (data.user.role === 'admin' ? '/admin' : '/'));
+        setLocation(dest);
       },
       onError: (err: any) => {
         toast.error(err.message || "Error al iniciar sesión");

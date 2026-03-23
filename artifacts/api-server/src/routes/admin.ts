@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, storesTable, productsTable, reviewsTable, categoriesTable, bannersTable } from "@workspace/db";
-import { eq, desc, asc, count, sql } from "drizzle-orm";
+import { db, usersTable, storesTable, productsTable, productImagesTable, reviewsTable, categoriesTable, bannersTable } from "@workspace/db";
+import { eq, desc, asc, count, sql, inArray } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth.js";
 
 const router: IRouter = Router();
@@ -244,6 +244,157 @@ router.delete("/banners/:id", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal Server Error", message: "Failed to delete banner" });
+  }
+});
+
+// ─── Store detail (admin) ──────────────────────────────────────────────────────
+
+router.get("/stores/:id/detail", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [store] = await db.select().from(storesTable).where(eq(storesTable.id, id)).limit(1);
+    if (!store) { res.status(404).json({ error: "Not Found" }); return; }
+
+    const [category] = store.categoryId
+      ? await db.select().from(categoriesTable).where(eq(categoriesTable.id, store.categoryId)).limit(1)
+      : [];
+    const [owner] = await db.select({
+      id: usersTable.id, name: usersTable.name, email: usersTable.email,
+      role: usersTable.role, phone: usersTable.phone, district: usersTable.district,
+      createdAt: usersTable.createdAt, isBlocked: usersTable.isBlocked,
+    }).from(usersTable).where(eq(usersTable.id, store.userId)).limit(1);
+
+    const [{ productCount }] = await db.select({ productCount: count() }).from(productsTable).where(eq(productsTable.storeId, id));
+    const [{ reviewCount }] = await db.select({ reviewCount: count() }).from(reviewsTable).where(eq(reviewsTable.storeId, id));
+    const [avgResult] = await db.select({ avg: sql<number>`AVG(${reviewsTable.rating})` }).from(reviewsTable).where(eq(reviewsTable.storeId, id));
+
+    res.json({
+      ...store,
+      category: category || null,
+      owner: owner || null,
+      productCount: Number(productCount),
+      reviewCount: Number(reviewCount),
+      averageRating: avgResult.avg ? Number(avgResult.avg) : null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to get store detail" });
+  }
+});
+
+// ─── Store products (admin) ────────────────────────────────────────────────────
+
+router.get("/stores/:id/products", async (req, res) => {
+  try {
+    const storeId = parseInt(req.params.id);
+    const rawProducts = await db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.storeId, storeId))
+      .orderBy(asc(productsTable.sortOrder), asc(productsTable.id));
+
+    const productIds = rawProducts.map(p => p.id);
+    const allImages = productIds.length > 0
+      ? await db.select().from(productImagesTable).where(inArray(productImagesTable.productId, productIds)).orderBy(productImagesTable.sortOrder)
+      : [];
+
+    res.json(rawProducts.map(p => ({
+      ...p,
+      images: allImages.filter(img => img.productId === p.id),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to get store products" });
+  }
+});
+
+// ─── Toggle product status ────────────────────────────────────────────────────
+
+router.put("/products/:id/status", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { status } = req.body;
+    if (!["active", "inactive", "rejected"].includes(status)) {
+      res.status(400).json({ error: "Bad Request", message: "Invalid status" });
+      return;
+    }
+    const [prod] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, id)).limit(1);
+    if (!prod) { res.status(404).json({ error: "Not Found" }); return; }
+    const [updated] = await db.update(productsTable).set({ status, updatedAt: new Date() }).where(eq(productsTable.id, id)).returning();
+    res.json({ ...updated, images: [] });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to update product status" });
+  }
+});
+
+// ─── Delete product (admin) ───────────────────────────────────────────────────
+
+router.delete("/products/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(productImagesTable).where(eq(productImagesTable.productId, id));
+    await db.delete(productsTable).where(eq(productsTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to delete product" });
+  }
+});
+
+// ─── Store reviews (admin — includes hidden) ──────────────────────────────────
+
+router.get("/stores/:id/reviews", async (req, res) => {
+  try {
+    const storeId = parseInt(req.params.id);
+    const reviews = await db
+      .select({
+        id: reviewsTable.id, storeId: reviewsTable.storeId, userId: reviewsTable.userId,
+        rating: reviewsTable.rating, comment: reviewsTable.comment, isVisible: reviewsTable.isVisible,
+        createdAt: reviewsTable.createdAt,
+        userName: usersTable.name, userEmail: usersTable.email, userAvatar: usersTable.avatarUrl,
+      })
+      .from(reviewsTable)
+      .leftJoin(usersTable, eq(reviewsTable.userId, usersTable.id))
+      .where(eq(reviewsTable.storeId, storeId))
+      .orderBy(desc(reviewsTable.createdAt));
+
+    res.json(reviews.map(r => ({
+      id: r.id, storeId: r.storeId, userId: r.userId,
+      rating: r.rating, comment: r.comment, isVisible: r.isVisible, createdAt: r.createdAt,
+      user: { name: r.userName, email: r.userEmail, avatarUrl: r.userAvatar },
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to get reviews" });
+  }
+});
+
+// ─── Toggle review visibility ─────────────────────────────────────────────────
+
+router.put("/reviews/:id/visible", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [review] = await db.select({ isVisible: reviewsTable.isVisible }).from(reviewsTable).where(eq(reviewsTable.id, id)).limit(1);
+    if (!review) { res.status(404).json({ error: "Not Found" }); return; }
+    const [updated] = await db.update(reviewsTable).set({ isVisible: !review.isVisible }).where(eq(reviewsTable.id, id)).returning();
+    res.json(updated);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to toggle review" });
+  }
+});
+
+// ─── Delete review ────────────────────────────────────────────────────────────
+
+router.delete("/reviews/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(reviewsTable).where(eq(reviewsTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to delete review" });
   }
 });
 

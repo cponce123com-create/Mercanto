@@ -1,7 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/contexts";
-import { Store, Package, LayoutDashboard, Settings, LogOut, Users, Tag, Image as ImageIcon } from "lucide-react";
+import { Store, Package, LayoutDashboard, Settings, LogOut, Users, Tag, Image as ImageIcon, Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DashboardLayoutProps {
@@ -11,7 +11,37 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const [location, setLocation] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      setLocation(`/login?redirect=${encodeURIComponent(location)}`);
+      return;
+    }
+    if (role === 'admin' && user.role !== 'admin') {
+      setLocation('/');
+    }
+  }, [user, isLoading, role]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user || (role === 'admin' && user.role !== 'admin')) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <ShieldAlert className="w-12 h-12 mx-auto mb-3 text-destructive opacity-50" />
+          <p className="font-semibold">Acceso restringido</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     logout();
