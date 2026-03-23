@@ -12,6 +12,7 @@
     "seed-san-ramon": "tsx ./src/seed-san-ramon.ts",
     "fix-offers": "tsx ./src/fix-offers.ts",
     "fix-coords": "tsx ./src/fix-coords.ts",
+    "seed-other-districts": "tsx ./src/seed-other-districts.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
