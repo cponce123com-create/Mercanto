@@ -1,6 +1,7 @@
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { getStoredToken } from "@/lib/contexts";
 import {
   ArrowLeft, Store as StoreIcon, MapPin, Phone, Star, Package, MessageSquare,
   Eye, EyeOff, CheckCircle2, XCircle, Loader2, Trash2, ExternalLink,
@@ -18,9 +19,13 @@ import { Link } from "wouter";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 async function apiFetch(path: string, opts?: RequestInit) {
+  const token = getStoredToken();
   const res = await fetch(`${BASE}/api${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    },
     ...opts,
   });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Error");
