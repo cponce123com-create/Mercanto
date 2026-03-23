@@ -32,3 +32,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 JWT_SECRET = "zAroQj9LdeSvAtcCoQUWVnloCPAqpNV0BdHS8YSibnaCLxBAPbKrz6NKyCPuiP4K"
+FRONTEND_URL = "https://1eb4da9b-3cf8-4af1-94ee-8b18f6adc4d4-00-9a4aheqrxu5v.picard.replit.dev"

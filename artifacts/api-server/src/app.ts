@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -26,7 +27,15 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+app.use(helmet());
+
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "http://localhost:5173";
+app.use(cors({
+  origin: ALLOWED_ORIGIN,
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

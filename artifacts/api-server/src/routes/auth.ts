@@ -7,8 +7,6 @@ import { authLimiter } from "../middlewares/rateLimiter.js";
 
 const router: IRouter = Router();
 
-router.use(authLimiter);
-
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, phone, district } = req.body;
@@ -28,14 +26,14 @@ router.post("/register", async (req, res) => {
     const token = signToken({ userId: user.id, role: user.role });
     const { passwordHash: _h, ...userPublic } = user;
     res.cookie("mercanto_token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax" });
-    res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false }, token });
+    res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false } });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal Server Error", message: "Registration failed" });
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -60,7 +58,7 @@ router.post("/login", async (req, res) => {
     const token = signToken({ userId: user.id, role: user.role });
     const { passwordHash: _h, ...userPublic } = user;
     res.cookie("mercanto_token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax" });
-    res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false }, token });
+    res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false } });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal Server Error", message: "Login failed" });

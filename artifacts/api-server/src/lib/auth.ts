@@ -43,9 +43,25 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "Unauthorized", message: "Invalid token" });
     return;
   }
-  req.userId = decoded.userId;
-  req.userRole = decoded.role;
-  next();
+
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id, role: usersTable.role, isBlocked: usersTable.isBlocked })
+      .from(usersTable)
+      .where(eq(usersTable.id, decoded.userId))
+      .limit(1);
+
+    if (!user || user.isBlocked) {
+      res.status(401).json({ error: "Unauthorized", message: "User not found or blocked" });
+      return;
+    }
+
+    req.userId = user.id;
+    req.userRole = user.role;
+    next();
+  } catch {
+    res.status(500).json({ error: "Internal Server Error", message: "Auth check failed" });
+  }
 }
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
