@@ -166,6 +166,7 @@ export default function CreateStore() {
 
   const initMiniMap = (lat: number, lng: number) => {
     if (!miniMapRef.current) return;
+    if (!mapboxgl.supported()) return;
 
     if (miniMapInstanceRef.current) {
       miniMapInstanceRef.current.flyTo({ center: [lng, lat], zoom: 16 });

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import { MapPin } from "lucide-react";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string;
 
@@ -37,9 +38,14 @@ export function StoreMap({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<number, mapboxgl.Marker>>(new Map());
+  const [webGLError, setWebGLError] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    if (!mapboxgl.supported()) {
+      setWebGLError(true);
+      return;
+    }
 
     const mapCenter: [number, number] = center
       ? [center[1], center[0]]
@@ -151,6 +157,16 @@ export function StoreMap({
       map.flyTo({ center: [parseFloat(String(s.lng)), parseFloat(String(s.lat))], zoom: 15 });
     }
   }, [stores, highlightedStoreId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (webGLError) {
+    return (
+      <div className={`relative ${className} flex flex-col items-center justify-center gap-3 bg-gray-50 border border-gray-200 rounded-xl`} style={{ minHeight: "400px" }}>
+        <MapPin className="w-10 h-10 text-gray-300" />
+        <p className="text-sm text-gray-500 font-medium">El mapa no está disponible en este navegador</p>
+        <p className="text-xs text-gray-400">Prueba con Chrome, Firefox o Safari actualizado</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className}`} style={{ minHeight: "400px" }}>
