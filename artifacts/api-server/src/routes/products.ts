@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, storesTable, productsTable, productImagesTable, categoriesTable } from "@workspace/db";
-import { eq, and, asc, desc, sql } from "drizzle-orm";
+import { eq, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { requireVendor, requireAuth } from "../lib/auth.js";
 import { generateUniqueProductSlug } from "../lib/slug.js";
 
@@ -56,7 +56,7 @@ router.get("/", requireVendor, async (req, res) => {
 
     const productIds = products.map(p => p.id);
     const images = productIds.length > 0
-      ? await db.select().from(productImagesTable).where(sql`${productImagesTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`)
+      ? await db.select().from(productImagesTable).where(inArray(productImagesTable.productId, productIds))
       : [];
     const imagesByProduct = images.reduce((acc, img) => {
       if (!acc[img.productId]) acc[img.productId] = [];
@@ -102,8 +102,9 @@ router.post("/", requireVendor, async (req, res) => {
       .select({ count: sql<number>`COUNT(*)` })
       .from(productsTable)
       .where(eq(productsTable.storeId, store.id));
-    if (Number(productCount) >= 30) {
-      res.status(400).json({ error: "Bad Request", message: "Maximum 30 products allowed" });
+    const maxProducts = Number(process.env.MAX_PRODUCTS_PER_STORE) || 30;
+    if (Number(productCount) >= maxProducts) {
+      res.status(400).json({ error: "Bad Request", message: `Maximum ${maxProducts} products allowed` });
       return;
     }
     const { name, description, price, offerPrice, stock, unit, categoryId, status, images } = req.body;

@@ -169,7 +169,8 @@ function ReviewsSection({ storeSlug }: { storeSlug: string }) {
   const [showAll, setShowAll] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: reviews = [], isLoading } = useGetStoreReviews(storeSlug);
+  const { data: reviewsData, isLoading } = useGetStoreReviews(storeSlug);
+  const reviews: any[] = (reviewsData as any)?.reviews ?? (Array.isArray(reviewsData) ? reviewsData : []);
 
   const deleteMutation = useDeleteReview({
     mutation: {

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, storesTable, productsTable, productImagesTable, categoriesTable } from "@workspace/db";
-import { eq, and, isNotNull, desc, sql } from "drizzle-orm";
+import { eq, and, isNotNull, desc, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -46,7 +46,7 @@ router.get("/", async (req, res) => {
 
     const productIds = products.map(p => p.id);
     const images = productIds.length > 0
-      ? await db.select().from(productImagesTable).where(sql`${productImagesTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`)
+      ? await db.select().from(productImagesTable).where(inArray(productImagesTable.productId, productIds))
       : [];
     const imagesByProduct = images.reduce((acc, img) => {
       if (!acc[img.productId]) acc[img.productId] = [];

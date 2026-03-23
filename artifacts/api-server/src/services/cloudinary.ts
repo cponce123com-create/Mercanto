@@ -9,13 +9,14 @@ cloudinary.config({
 
 export { cloudinary };
 
-export function generateUploadSignature(folder: string, publicId?: string) {
+export function generateUploadSignature(folder: string, publicId?: string, allowedFormat?: string) {
   const timestamp = Math.round(Date.now() / 1000);
   const params: Record<string, string | number> = {
     timestamp,
     folder: `mercanto/${folder}`,
   };
   if (publicId) params.public_id = publicId;
+  if (allowedFormat) params.allowed_formats = allowedFormat;
 
   const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET!);
 
@@ -26,6 +27,7 @@ export function generateUploadSignature(folder: string, publicId?: string) {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
     folder: params.folder,
     publicId,
+    allowedFormat,
   };
 }
 

@@ -1,0 +1,15 @@
+Necesito las siguientes mejoras de estabilidad y calidad en el proyecto Mercanto:
+1. Reemplazar sql.raw() con inArray() de Drizzle
+En artifacts/api-server/src/routes/products.ts y en artifacts/api-server/src/routes/offers.ts hay un patrón peligroso:
+tssql`${productImagesTable.productId} = ANY(${sql.raw(`ARRAY[${productIds.join(",")}]`)})`
+Reemplázalo por el helper inArray de drizzle-orm que ya está importado en otros archivos:
+tsinArray(productImagesTable.productId, productIds)
+Aplica el mismo cambio en todos los lugares donde aparezca este patrón.
+2. Agregar paginación al endpoint de reviews
+En artifacts/api-server/src/routes/stores.ts, el endpoint que devuelve reviews de una tienda (busca donde se consulta reviewsTable) carga todas las reviews sin límite. Agrégale paginación con parámetros page y limit (máximo 20 por página, default 10), igual al patrón que ya usa el endpoint GET /stores.
+3. Validar tipo de archivo en el endpoint de upload
+En artifacts/api-server/src/routes/upload.ts, el endpoint POST /sign actualmente solo valida el folder. Agrega validación del campo contentType en el body. Solo acepta: image/jpeg, image/png, image/webp, image/gif. Si no se envía o no es válido, responde con 400. Pasa el contentType como restricción allowed_formats en los parámetros de firma de Cloudinary en artifacts/api-server/src/services/cloudinary.ts.
+4. Optimizar las imágenes estáticas
+Las imágenes en artifacts/mercanto/public/images/ son muy pesadas (hero-marketplace.png pesa 1.7MB, las otras ~1.3MB cada una). Usa sharp para generar versiones WebP optimizadas. Crea un script en scripts/src/optimize-images.ts que procese todas las imágenes de esa carpeta y genere versiones .webp con calidad 80 y ancho máximo 1200px. Luego actualiza las referencias en el código del frontend para usar las versiones .webp.
+5. Agregar variable de entorno para el límite de productos por tienda
+En artifacts/api-server/src/routes/products.ts el límite de 30 productos está hardcodeado. Cámbialo para que lea de process.env.MAX_PRODUCTS_PER_STORE con un fallback de 30. Agrega esta variable al archivo .env.example con el valor 30.

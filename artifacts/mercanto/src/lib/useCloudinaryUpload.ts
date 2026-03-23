@@ -37,7 +37,7 @@ export function useCloudinaryUpload() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: "include",
-        body: JSON.stringify({ folder }),
+        body: JSON.stringify({ folder, contentType: file.type, fileSize: file.size }),
       });
 
       if (!signRes.ok) {

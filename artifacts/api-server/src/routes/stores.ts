@@ -357,11 +357,23 @@ router.get("/:storeSlug/products", optionalAuth, async (req, res) => {
 router.get("/:storeSlug/reviews", async (req, res) => {
   try {
     const storeSlug = String(req.params.storeSlug);
+    const page = Math.max(1, parseInt(String(req.query.page || "1")));
+    const limit = Math.min(20, Math.max(1, parseInt(String(req.query.limit || "10"))));
+    const offset = (page - 1) * limit;
+
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.slug, storeSlug)).limit(1);
     if (!store) {
       res.status(404).json({ error: "Not Found", message: "Store not found" });
       return;
     }
+
+    const whereClause = and(eq(reviewsTable.storeId, store.id), eq(reviewsTable.isVisible, true));
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(reviewsTable)
+      .where(whereClause);
+
     const reviews = await db
       .select({
         id: reviewsTable.id, storeId: reviewsTable.storeId, userId: reviewsTable.userId,
@@ -372,14 +384,24 @@ router.get("/:storeSlug/reviews", async (req, res) => {
       })
       .from(reviewsTable)
       .leftJoin(usersTable, eq(reviewsTable.userId, usersTable.id))
-      .where(and(eq(reviewsTable.storeId, store.id), eq(reviewsTable.isVisible, true)))
-      .orderBy(desc(reviewsTable.createdAt));
+      .where(whereClause)
+      .orderBy(desc(reviewsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    res.json(reviews.map(r => ({
-      id: r.id, storeId: r.storeId, userId: r.userId, rating: r.rating, comment: r.comment,
-      isVisible: r.isVisible, createdAt: r.createdAt,
-      user: { id: r.userId, name: r.userName, email: r.userEmail, role: r.userRole, avatarUrl: r.userAvatar, district: r.userDistrict, isBlocked: false },
-    })));
+    res.json({
+      reviews: reviews.map(r => ({
+        id: r.id, storeId: r.storeId, userId: r.userId, rating: r.rating, comment: r.comment,
+        isVisible: r.isVisible, createdAt: r.createdAt,
+        user: { id: r.userId, name: r.userName, email: r.userEmail, role: r.userRole, avatarUrl: r.userAvatar, district: r.userDistrict, isBlocked: false },
+      })),
+      pagination: {
+        total: Number(total),
+        page,
+        limit,
+        totalPages: Math.ceil(Number(total) / limit),
+      },
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal Server Error", message: "Failed to get reviews" });

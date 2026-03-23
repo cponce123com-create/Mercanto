@@ -4,16 +4,24 @@ import { generateUploadSignature } from "../services/cloudinary.js";
 
 const router: IRouter = Router();
 
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+type AllowedContentType = typeof ALLOWED_CONTENT_TYPES[number];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const MIME_TO_EXT: Record<AllowedContentType, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 
 // POST /api/upload/sign
 // Returns a signed upload signature so the frontend can upload directly to Cloudinary.
 // Allowed folders: "stores/logos", "stores/banners", "products"
 router.post("/sign", requireAuth, (req, res) => {
-  const { folder, mimeType, fileSize } = req.body as {
+  const { folder, contentType, fileSize } = req.body as {
     folder?: string;
-    mimeType?: string;
+    contentType?: string;
     fileSize?: number;
   };
 
@@ -26,10 +34,10 @@ router.post("/sign", requireAuth, (req, res) => {
     return;
   }
 
-  if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
+  if (!contentType || !(ALLOWED_CONTENT_TYPES as readonly string[]).includes(contentType)) {
     res.status(400).json({
       error: "Tipo de archivo no permitido",
-      message: "Solo se permiten imágenes en formato JPEG, PNG, WebP o GIF.",
+      message: "contentType es requerido. Solo se permiten: image/jpeg, image/png, image/webp, image/gif.",
     });
     return;
   }
@@ -42,7 +50,8 @@ router.post("/sign", requireAuth, (req, res) => {
     return;
   }
 
-  const result = generateUploadSignature(folder);
+  const ext = MIME_TO_EXT[contentType as AllowedContentType];
+  const result = generateUploadSignature(folder, undefined, ext);
   res.json({
     ...result,
     allowedFormats: ["jpg", "jpeg", "png", "webp", "gif"],
