@@ -26,22 +26,16 @@ export default function MapPage() {
 
   const validStores = useMemo(() => (stores ?? []).filter(s => s.lat && s.lng), [stores]);
 
-  // Extract unique categories from loaded stores
   const categories = useMemo(() => {
-    const seen = new Map<string, { id: number; name: string; icon: string | undefined }>();
+    const seen = new Map<string, { name: string; icon: string | undefined }>();
     for (const s of validStores) {
       if (s.category?.name && !seen.has(s.category.name)) {
-        seen.set(s.category.name, {
-          id: s.category.id ?? 0,
-          name: s.category.name,
-          icon: s.category.icon ?? undefined,
-        });
+        seen.set(s.category.name, { name: s.category.name, icon: s.category.icon ?? undefined });
       }
     }
     return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [validStores]);
 
-  // Filter stores by selected category
   const filteredStores = useMemo(() => {
     if (!selectedCategory) return validStores;
     return validStores.filter(s => s.category?.name === selectedCategory);
@@ -52,10 +46,10 @@ export default function MapPage() {
       <Navbar />
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Sidebar */}
-        <div className="w-full md:w-96 bg-white border-r flex flex-col h-[45vh] md:h-full z-10 shadow-xl md:shadow-none">
 
-          {/* District selector */}
+        {/* ── Sidebar ──────────────────────────────────────────────── */}
+        <div className="w-full md:w-80 bg-white border-r flex flex-col h-[40vh] md:h-full z-10 shadow-xl md:shadow-none shrink-0">
+
           <div className="p-4 border-b bg-background/50 shrink-0">
             <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-primary" /> Mapa de Tiendas
@@ -78,41 +72,6 @@ export default function MapPage() {
             </p>
           </div>
 
-          {/* Category filter pills */}
-          {!isLoading && categories.length > 0 && (
-            <div className="border-b bg-white shrink-0">
-              <div className="flex gap-2 overflow-x-auto px-3 py-2.5 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-                {/* "Todas" pill */}
-                <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all border ${
-                    selectedCategory === null
-                      ? "bg-[#2563EB] text-white border-[#2563EB] shadow-sm"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-[#2563EB]/50 hover:text-[#2563EB]"
-                  }`}
-                >
-                  🏪 Todas
-                </button>
-
-                {categories.map(cat => (
-                  <button
-                    key={cat.name}
-                    onClick={() => setSelectedCategory(selectedCategory === cat.name ? null : cat.name)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all border ${
-                      selectedCategory === cat.name
-                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-sm"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-[#2563EB]/50 hover:text-[#2563EB]"
-                    }`}
-                  >
-                    {cat.icon && <span>{cat.icon}</span>}
-                    <span>{cat.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Store list */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {isLoading ? (
               <div className="flex justify-center py-10">
@@ -120,9 +79,20 @@ export default function MapPage() {
               </div>
             ) : filteredStores.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground text-sm">
-                {selectedCategory
-                  ? <><p className="font-semibold text-base mb-1">Sin resultados</p><p>No hay tiendas de <strong>{selectedCategory}</strong> en este distrito.</p></>
-                  : "No hay tiendas con ubicación registrada."}
+                {selectedCategory ? (
+                  <>
+                    <p className="font-semibold text-base mb-1">Sin resultados</p>
+                    <p>No hay tiendas de <strong>{selectedCategory}</strong> en este distrito.</p>
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="mt-3 text-sm text-primary font-semibold hover:underline"
+                    >
+                      Ver todas
+                    </button>
+                  </>
+                ) : (
+                  "No hay tiendas con ubicación registrada."
+                )}
               </div>
             ) : (
               filteredStores.map(store => (
@@ -162,8 +132,47 @@ export default function MapPage() {
           </div>
         </div>
 
-        {/* Map Area */}
-        <div className="flex-1 relative h-[55vh] md:h-full">
+        {/* ── Map area + Category ribbon ────────────────────────────── */}
+        <div className="flex-1 relative h-[60vh] md:h-full flex flex-col">
+
+          {/* Category ribbon — floating above map */}
+          {!isLoading && categories.length > 0 && (
+            <div className="absolute top-3 left-3 right-3 z-[1000] pointer-events-none">
+              <div
+                className="flex gap-2 overflow-x-auto pointer-events-auto"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                {/* Todas */}
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 shadow-lg transition-all duration-200 border backdrop-blur-sm ${
+                    selectedCategory === null
+                      ? "bg-[#2563EB] text-white border-[#2563EB] scale-105 shadow-blue-400/40"
+                      : "bg-white/90 text-gray-700 border-white hover:bg-white hover:shadow-xl hover:scale-105"
+                  }`}
+                >
+                  🏪 <span>Todas</span>
+                </button>
+
+                {categories.map(cat => (
+                  <button
+                    key={cat.name}
+                    onClick={() => setSelectedCategory(selectedCategory === cat.name ? null : cat.name)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap shrink-0 shadow-lg transition-all duration-200 border backdrop-blur-sm ${
+                      selectedCategory === cat.name
+                        ? "bg-[#2563EB] text-white border-[#2563EB] scale-105 shadow-blue-400/40"
+                        : "bg-white/90 text-gray-700 border-white hover:bg-white hover:shadow-xl hover:scale-105"
+                    }`}
+                  >
+                    {cat.icon && <span>{cat.icon}</span>}
+                    <span>{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Map */}
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-secondary/30">
               <div className="bg-white rounded-2xl p-6 shadow-lg flex flex-col items-center gap-3">
@@ -171,33 +180,41 @@ export default function MapPage() {
                 <p className="text-sm text-muted-foreground">Cargando mapa...</p>
               </div>
             </div>
-          ) : filteredStores.length === 0 ? (
+          ) : filteredStores.length === 0 && validStores.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center bg-secondary/20">
               <div className="bg-white rounded-2xl p-8 shadow-xl text-center max-w-sm">
                 <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                 <h3 className="font-bold text-lg mb-2">Sin tiendas en el mapa</h3>
                 <p className="text-muted-foreground text-sm">
-                  {selectedCategory
-                    ? `No hay tiendas de "${selectedCategory}" en este distrito.`
-                    : "No hay tiendas con ubicación registrada en este distrito."}
+                  No hay tiendas con ubicación registrada en este distrito.
                 </p>
-                {selectedCategory && (
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className="mt-3 text-sm text-primary font-semibold hover:underline"
-                  >
-                    Ver todas las categorías
-                  </button>
-                )}
               </div>
             </div>
           ) : (
             <StoreMap
-              stores={filteredStores}
+              stores={filteredStores.length > 0 ? filteredStores : validStores}
               highlightedStoreId={selectedStore ?? highlightedId}
               onStoreClick={(s) => setSelectedStore(s.id)}
-              className="w-full h-full"
+              className="w-full h-full flex-1"
             />
+          )}
+
+          {/* No results overlay when filter is active but map still shows */}
+          {!isLoading && filteredStores.length === 0 && validStores.length > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-white rounded-2xl p-6 shadow-xl text-center max-w-xs pointer-events-auto">
+                <p className="font-bold text-base mb-1">Sin resultados</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  No hay tiendas de <strong>{selectedCategory}</strong> en este distrito.
+                </p>
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="text-sm text-primary font-semibold hover:underline"
+                >
+                  Ver todas las categorías
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
