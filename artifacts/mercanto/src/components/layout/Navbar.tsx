@@ -1,12 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { Search, Menu, User, LogOut, LayoutDashboard, Store as StoreIcon, Heart, X, Package } from "lucide-react";
+import { Search, Menu, User, LogOut, LayoutDashboard, Store as StoreIcon, Heart, X, Package, MapPin, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, useDistrict } from "@/lib/contexts";
 import { DISTRICTS } from "@/lib/constants";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGlobalSearch } from "@workspace/api-client-react";
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -23,10 +22,47 @@ function formatPrice(price: string | null | undefined): string {
   return `S/ ${parseFloat(price).toFixed(2)}`;
 }
 
+function DistrictButton() {
+  const { district, setDistrict, detecting } = useDistrict();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex flex-col items-center gap-0.5 text-[#1E293B] hover:text-[#2563EB] transition-colors outline-none group">
+          <div className="flex items-center gap-1">
+            <MapPin className="w-4 h-4 text-[#EF4444]" />
+            <span className="text-xs font-bold leading-none max-w-[72px] truncate">
+              {detecting ? "Detectando…" : (district || "Elegir")}
+            </span>
+            <ChevronDown className="w-3 h-3 text-gray-400 group-hover:text-[#2563EB] transition-colors" />
+          </div>
+          <span className="text-[10px] font-semibold leading-none text-gray-500 mt-0.5">Distrito</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52 max-h-[320px] overflow-y-auto mt-2">
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+          Selecciona tu distrito
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {DISTRICTS.map(d => (
+          <DropdownMenuItem
+            key={d}
+            onClick={() => setDistrict(d)}
+            className="flex items-center justify-between cursor-pointer"
+          >
+            <span>{d}</span>
+            {d === district && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function Navbar() {
   const [, setLocation] = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
-  const { district, setDistrict } = useDistrict();
+  const { district, setDistrict, detecting } = useDistrict();
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -58,7 +94,6 @@ export function Navbar() {
     setLocation(url);
   }, [setLocation]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -71,7 +106,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200 shadow-sm">
-      <div className="container mx-auto px-4 h-14 md:h-16 flex items-center gap-3 md:gap-5">
+      <div className="container mx-auto px-4 h-14 md:h-16 flex items-center gap-3 md:gap-4">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -83,7 +118,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Search — center, takes remaining space */}
+        {/* Search */}
         <div ref={wrapperRef} className="flex-1 max-w-2xl relative">
           <form onSubmit={handleSearch} className="flex">
             <input
@@ -122,7 +157,6 @@ export function Navbar() {
                 </div>
               ) : (
                 <>
-                  {/* Stores section */}
                   {stores.length > 0 && (
                     <div>
                       <div className="px-4 py-2 bg-gray-50 border-b">
@@ -155,7 +189,6 @@ export function Navbar() {
                     </div>
                   )}
 
-                  {/* Products section */}
                   {products.length > 0 && (
                     <div>
                       <div className="px-4 py-2 bg-gray-50 border-b border-t">
@@ -204,7 +237,6 @@ export function Navbar() {
                     </div>
                   )}
 
-                  {/* Footer: see all results */}
                   <div className="border-t">
                     <button
                       type="button"
@@ -222,6 +254,10 @@ export function Navbar() {
 
         {/* Right — desktop */}
         <nav className="hidden md:flex items-center gap-5 shrink-0">
+
+          {/* District selector */}
+          <DistrictButton />
+
           {isAuthenticated ? (
             <>
               <Link href="/profile" className="flex flex-col items-center gap-0.5 text-[#1E293B] hover:text-[#2563EB] transition-colors cursor-pointer">
@@ -286,7 +322,35 @@ export function Navbar() {
         </nav>
 
         {/* Mobile menu */}
-        <div className="md:hidden flex items-center shrink-0 ml-auto">
+        <div className="md:hidden flex items-center shrink-0 ml-auto gap-2">
+
+          {/* Compact district pill — mobile */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-1 text-xs font-semibold text-[#1E293B] bg-gray-100 rounded-full px-2.5 py-1.5 hover:bg-gray-200 transition-colors outline-none max-w-[110px]">
+                <MapPin className="w-3 h-3 text-[#EF4444] shrink-0" />
+                <span className="truncate">{detecting ? "Detectando…" : (district || "Elegir")}</span>
+                <ChevronDown className="w-3 h-3 shrink-0 text-gray-400" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 max-h-[300px] overflow-y-auto">
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+                Selecciona tu distrito
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {DISTRICTS.map(d => (
+                <DropdownMenuItem
+                  key={d}
+                  onClick={() => setDistrict(d)}
+                  className="flex items-center justify-between cursor-pointer"
+                >
+                  <span>{d}</span>
+                  {d === district && <Check className="w-3.5 h-3.5 text-[#2563EB]" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="-mr-2">
@@ -295,14 +359,6 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px]">
               <div className="flex flex-col gap-5 pt-6">
-                <Select value={district} onValueChange={setDistrict}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar distrito" /></SelectTrigger>
-                  <SelectContent>
-                    {DISTRICTS.map(d => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
 
                 <nav className="flex flex-col gap-2 text-sm font-medium border-t pt-4">
                   <Link href="/" className="py-2 hover:text-[#2563EB]">Inicio</Link>

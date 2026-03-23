@@ -3,11 +3,9 @@ import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { useDistrict } from "@/lib/contexts";
-import { ChevronDown, ArrowRight, MapPin, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ArrowRight, MapPin, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DISTRICTS } from "@/lib/constants";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OfferProduct {
   id: number;
@@ -243,10 +241,12 @@ function BannerCarousel() {
 
 /* ─── Page ─── */
 export default function Home() {
-  const { district, setDistrict } = useDistrict();
+  const { district, detecting } = useDistrict();
   const [, setLocation] = useLocation();
 
-  const { data: featured, isLoading: loadingFeatured } = useListStores({ featured: true, limit: 4 });
+  const { data: featured, isLoading: loadingFeatured } = useListStores(
+    district ? { featured: true, limit: 4, district } : { featured: true, limit: 4 }
+  );
   const { data: categories } = useListCategories();
 
   const { data: offers, isLoading: loadingOffers } = useQuery<OfferProduct[]>({
@@ -277,26 +277,25 @@ export default function Home() {
     <div className="min-h-screen flex flex-col" style={{ background: "#F5F5F5" }}>
       <Navbar />
 
-      {/* District selector bar */}
-      <div className="bg-white border-b border-gray-200 shadow-none">
-        <div className="container mx-auto px-4 py-2 flex flex-col items-center gap-0.5">
-          <div className="flex items-center gap-1 flex-wrap justify-center">
-            <span className="text-[#1E293B] font-semibold text-base">Compra en tu Distrito:</span>
-            <Select value={district} onValueChange={setDistrict}>
-              <SelectTrigger className="border-none shadow-none bg-transparent p-0 h-auto text-[#EF4444] font-bold text-base hover:bg-transparent focus:ring-0 gap-0.5 w-auto [&>svg]:hidden">
-                <SelectValue />
-                <ChevronDown className="w-4 h-4 text-[#EF4444] ml-0.5 inline" />
-              </SelectTrigger>
-              <SelectContent>
-                {DISTRICTS.map(d => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Detecting location banner */}
+      {detecting && (
+        <div className="bg-[#EFF6FF] border-b border-blue-200">
+          <div className="container mx-auto px-4 py-2 flex items-center justify-center gap-2 text-sm text-[#2563EB]">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Detectando tu ubicación para mostrarte tiendas cercanas…</span>
           </div>
-          <p className="text-gray-500 text-xs">Productos cerca de ti para recoger en tienda</p>
         </div>
-      </div>
+      )}
+
+      {/* Active district indicator */}
+      {!detecting && district && (
+        <div className="bg-white border-b border-gray-100">
+          <div className="container mx-auto px-4 py-1.5 flex items-center justify-center gap-1.5 text-xs text-gray-500">
+            <MapPin className="w-3 h-3 text-[#EF4444]" />
+            <span>Mostrando tiendas de <strong className="text-[#1E293B]">{district}</strong></span>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1">
         <div className="container mx-auto px-3 md:px-4 py-3 space-y-4">

@@ -1,0 +1,29 @@
+Hay dos problemas con el selector de distrito en Mercanto:
+PROBLEMA 1 — El selector de distrito está mal ubicado
+Actualmente aparece como un texto debajo del navbar que dice "Compra en tu Distrito: Vitoc". Necesito moverlo al navbar, integrado junto a los demás elementos (búsqueda, Favoritos, Mi Cuenta). Debe verse como un selector compacto con un ícono de ubicación y el nombre del distrito seleccionado. Al hacer click debe abrir un dropdown con la lista de distritos disponibles para cambiar.
+PROBLEMA 2 — El selector de distrito no filtra el contenido del home
+Cuando el usuario selecciona un distrito (por ejemplo "San Ramón" o "El Tambo"), el home debe recargar y mostrar únicamente:
+
+Las tiendas de ese distrito
+Los productos en oferta de ese distrito
+Los banners relevantes (si aplica)
+
+Actualmente esto no funciona. El distrito seleccionado no se está pasando como filtro a las llamadas del API. Revisa todos los fetch/queries del home y asegúrate de que incluyan el parámetro district con el valor del distrito activo.
+PROBLEMA 3 — El distrito por defecto debe detectarse automáticamente
+Al entrar por primera vez al home, antes de que el usuario elija nada, el sistema debe mostrar contenido filtrado por el distrito del usuario. Implementa esto en este orden de prioridad:
+
+Si el usuario está logueado y tiene district guardado en su perfil, usa ese.
+Si no, revisa si hay un distrito guardado en localStorage (de una visita anterior).
+Si no hay ninguno guardado, usa la API del browser navigator.geolocation para obtener las coordenadas del usuario y llama al endpoint GET /api/stores?lat=...&lng=...&radiusKm=15 para determinar el distrito más cercano con tiendas activas. Muestra un mensaje breve mientras detecta: "Detectando tu ubicación...".
+Si el usuario niega el permiso de ubicación o falla la detección, muestra un modal o banner amigable que le pida elegir su distrito manualmente de la lista.
+
+El distrito activo debe guardarse siempre en localStorage para que en la siguiente visita cargue directo sin preguntar.
+IMPLEMENTACIÓN DEL SELECTOR EN EL NAVBAR
+El componente debe:
+
+Mostrar un ícono de pin de ubicación + nombre del distrito activo (ej: "San Ramón")
+Al hacer click, abrir un dropdown con todos los distritos disponibles (obtenidos del API o de una lista fija)
+Al seleccionar uno, actualizar el estado global del distrito, guardarlo en localStorage, actualizar el perfil del usuario si está logueado (llamando a PUT /api/auth/profile con el nuevo district), y refiltrar todo el contenido del home
+En mobile debe verse bien en la barra de navegación inferior también
+
+El estado del distrito activo debe vivir en un contexto global de React (o en el store que ya exista) para que todos los componentes del home puedan suscribirse y reaccionar al cambio sin necesidad de recargar la página.

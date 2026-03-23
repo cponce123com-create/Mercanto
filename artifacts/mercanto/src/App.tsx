@@ -2,8 +2,10 @@ import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, DistrictProvider } from "@/lib/contexts";
+import { AuthProvider, DistrictProvider, useDistrict } from "@/lib/contexts";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { DISTRICTS } from "@/lib/constants";
+import { MapPin, X } from "lucide-react";
 import NotFound from "@/pages/not-found";
 
 // Pages
@@ -33,6 +35,48 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function DistrictPickerModal() {
+  const { showPicker, setShowPicker, setDistrict, district } = useDistrict();
+  if (!showPicker) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b bg-[#F8FAFC]">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-[#EF4444]" />
+            <span className="font-bold text-sm text-[#1E293B]">¿En qué distrito estás?</span>
+          </div>
+          {district && (
+            <button onClick={() => setShowPicker(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <p className="px-5 pt-3 pb-1 text-xs text-gray-500">
+          Selecciona tu distrito para ver tiendas y ofertas cercanas a ti.
+        </p>
+        <div className="overflow-y-auto max-h-[50vh] px-3 py-2">
+          {DISTRICTS.map(d => (
+            <button
+              key={d}
+              onClick={() => setDistrict(d)}
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-[#1E293B] hover:bg-[#EFF6FF] hover:text-[#2563EB] transition-colors flex items-center gap-2"
+            >
+              <MapPin className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+              {d}
+            </button>
+          ))}
+        </div>
+        <div className="px-5 pb-5 pt-2 border-t mt-1">
+          <p className="text-[10px] text-gray-400 text-center">
+            Puedes cambiar el distrito en cualquier momento desde la barra de navegación.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const HIDE_BOTTOM_NAV = ["/admin", "/vendor", "/map", "/login", "/register"];
 
@@ -83,6 +127,7 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
+              <DistrictPickerModal />
             </WouterRouter>
             <Toaster position="top-center" richColors />
           </TooltipProvider>
