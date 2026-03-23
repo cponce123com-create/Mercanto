@@ -8,6 +8,8 @@
     "seed": "tsx ./src/seed.ts",
     "fix-featured": "tsx ./src/fix-featured.ts",
     "fix-admin": "tsx ./src/fix-admin.ts",
+    "check-db": "tsx ./src/check-db.ts",
+    "seed-san-ramon": "tsx ./src/seed-san-ramon.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
