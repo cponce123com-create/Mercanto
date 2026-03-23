@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Mercanto — Marketplace Vecinal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: stores
+    description: Store operations
+  - name: products
+    description: Product operations
+  - name: categories
+    description: Category operations
+  - name: reviews
+    description: Review operations
+  - name: search
+    description: Search operations
+  - name: admin
+    description: Admin operations
+  - name: banners
+    description: Banner operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +39,821 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: authRegister
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: authMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/profile:
+    put:
+      operationId: authUpdateProfile
+      tags: [auth]
+      summary: Update profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all active categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /stores:
+    get:
+      operationId: listStores
+      tags: [stores]
+      summary: List active stores with filters
+      parameters:
+        - name: district
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, name, visits]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of stores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreListResponse"
+
+    post:
+      operationId: createStore
+      tags: [stores]
+      summary: Create a new store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStoreRequest"
+      responses:
+        "200":
+          description: Store created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stores/map:
+    get:
+      operationId: listStoresForMap
+      tags: [stores]
+      summary: List stores with coordinates for map
+      parameters:
+        - name: district
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of stores for map
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StoreMapItem"
+
+  /stores/my:
+    get:
+      operationId: getMyStore
+      tags: [stores]
+      summary: Get current vendor's store
+      responses:
+        "200":
+          description: Vendor's store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreDetail"
+        "404":
+          description: No store found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stores/{slug}:
+    get:
+      operationId: getStoreBySlug
+      tags: [stores]
+      summary: Get store by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Store details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreDetail"
+        "404":
+          description: Store not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateStore
+      tags: [stores]
+      summary: Update store
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreRequest"
+      responses:
+        "200":
+          description: Store updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
+  /stores/{slug}/visit:
+    post:
+      operationId: incrementStoreVisit
+      tags: [stores]
+      summary: Increment store visit count
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Visit incremented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /stores/{storeSlug}/products:
+    get:
+      operationId: getProductsByStore
+      tags: [products]
+      summary: Get products of a store (public)
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductWithImages"
+
+  /vendor/products:
+    get:
+      operationId: getVendorProducts
+      tags: [products]
+      summary: Get vendor's products
+      responses:
+        "200":
+          description: Vendor products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductWithImages"
+
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "200":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductWithImages"
+
+  /vendor/products/{id}:
+    get:
+      operationId: getProductById
+      tags: [products]
+      summary: Get product by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductWithImages"
+
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "200":
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductWithImages"
+
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /vendor/products/{id}/toggle:
+    put:
+      operationId: toggleProductStatus
+      tags: [products]
+      summary: Toggle product active/inactive
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductWithImages"
+
+  /stores/{storeSlug}/reviews:
+    get:
+      operationId: getStoreReviews
+      tags: [reviews]
+      summary: Get store reviews
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewWithUser"
+
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Create a review
+      parameters:
+        - name: storeSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewRequest"
+      responses:
+        "200":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewWithUser"
+
+  /reviews/{id}:
+    delete:
+      operationId: deleteReview
+      tags: [reviews]
+      summary: Delete a review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Review deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /search:
+    get:
+      operationId: globalSearch
+      tags: [search]
+      summary: Global search for stores and products
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, stores, products]
+        - name: district
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResults"
+
+  /banners:
+    get:
+      operationId: listBanners
+      tags: [banners]
+      summary: List active banners
+      responses:
+        "200":
+          description: List of banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Banner"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Get admin stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/stores:
+    get:
+      operationId: adminListStores
+      tags: [admin]
+      summary: List all stores (admin)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: All stores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreListResponse"
+
+  /admin/stores/{id}/status:
+    put:
+      operationId: adminUpdateStoreStatus
+      tags: [admin]
+      summary: Update store status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreStatusRequest"
+      responses:
+        "200":
+          description: Store status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
+  /admin/stores/{id}/featured:
+    put:
+      operationId: adminToggleStoreFeatured
+      tags: [admin]
+      summary: Toggle store featured status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Featured status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users (admin)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+
+  /admin/users/{id}/role:
+    put:
+      operationId: adminUpdateUserRole
+      tags: [admin]
+      summary: Update user role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRoleRequest"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+
+  /admin/users/{id}/block:
+    put:
+      operationId: adminToggleUserBlock
+      tags: [admin]
+      summary: Toggle user block status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Block status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPublic"
+
+  /admin/categories:
+    get:
+      operationId: adminListCategories
+      tags: [admin]
+      summary: List all categories (admin)
+      responses:
+        "200":
+          description: All categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+    post:
+      operationId: adminCreateCategory
+      tags: [admin]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "200":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /admin/categories/{id}:
+    put:
+      operationId: adminUpdateCategory
+      tags: [admin]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "200":
+          description: Category updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /admin/banners:
+    get:
+      operationId: adminListBanners
+      tags: [admin]
+      summary: List all banners (admin)
+      responses:
+        "200":
+          description: All banners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Banner"
+
+    post:
+      operationId: adminCreateBanner
+      tags: [admin]
+      summary: Create a banner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBannerRequest"
+      responses:
+        "200":
+          description: Banner created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Banner"
+
+  /admin/banners/{id}:
+    put:
+      operationId: adminUpdateBanner
+      tags: [admin]
+      summary: Update a banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBannerRequest"
+      responses:
+        "200":
+          description: Banner updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Banner"
+
+    delete:
+      operationId: adminDeleteBanner
+      tags: [admin]
+      summary: Delete a banner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Banner deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +864,643 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        phone:
+          type: string
+        district:
+          type: string
+      required:
+        - name
+        - email
+        - password
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserPublic"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        isBlocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isBlocked
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        district:
+          type: string
+        avatarUrl:
+          type: string
+
+    UserListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserPublic"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - users
+        - total
+        - page
+        - totalPages
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        parentId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+          nullable: true
+        sortOrder:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - name
+        - slug
+
+    CreateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - name
+        - slug
+
+    Store:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        bannerUrl:
+          type: string
+          nullable: true
+        categoryId:
+          type: integer
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        lat:
+          type: string
+          nullable: true
+        lng:
+          type: string
+          nullable: true
+        whatsapp:
+          type: string
+          nullable: true
+        instagram:
+          type: string
+          nullable: true
+        facebook:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        status:
+          type: string
+        isFeatured:
+          type: boolean
+          nullable: true
+        totalVisits:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          $ref: "#/components/schemas/Category"
+          nullable: true
+      required:
+        - id
+        - userId
+        - name
+        - slug
+        - status
+
+    StoreDetail:
+      allOf:
+        - $ref: "#/components/schemas/Store"
+        - type: object
+          properties:
+            products:
+              type: array
+              items:
+                $ref: "#/components/schemas/ProductWithImages"
+            galleryImages:
+              type: array
+              items:
+                $ref: "#/components/schemas/GalleryImage"
+            reviewCount:
+              type: integer
+            averageRating:
+              type: number
+              nullable: true
+
+    StoreMapItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        lat:
+          type: string
+        lng:
+          type: string
+        whatsapp:
+          type: string
+          nullable: true
+        category:
+          $ref: "#/components/schemas/Category"
+          nullable: true
+      required:
+        - id
+        - name
+        - slug
+        - lat
+        - lng
+
+    StoreListResponse:
+      type: object
+      properties:
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/Store"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required:
+        - stores
+        - total
+        - page
+        - totalPages
+
+    CreateStoreRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        location:
+          type: string
+        district:
+          type: string
+        lat:
+          type: string
+        lng:
+          type: string
+        whatsapp:
+          type: string
+        instagram:
+          type: string
+        facebook:
+          type: string
+        website:
+          type: string
+        logoUrl:
+          type: string
+        logoPublicId:
+          type: string
+        bannerUrl:
+          type: string
+        bannerPublicId:
+          type: string
+      required:
+        - name
+
+    UpdateStoreRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreateStoreRequest"
+
+    UpdateStoreStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, active, rejected]
+      required:
+        - status
+
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        url:
+          type: string
+        publicId:
+          type: string
+        sortOrder:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - productId
+        - url
+        - publicId
+
+    GalleryImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        url:
+          type: string
+        publicId:
+          type: string
+        sortOrder:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - storeId
+        - url
+        - publicId
+
+    ProductWithImages:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        categoryId:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+        offerPrice:
+          type: string
+          nullable: true
+        stock:
+          type: integer
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        status:
+          type: string
+        sortOrder:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductImage"
+        category:
+          $ref: "#/components/schemas/Category"
+          nullable: true
+      required:
+        - id
+        - storeId
+        - name
+        - slug
+        - price
+        - status
+
+    CreateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: string
+        offerPrice:
+          type: string
+        stock:
+          type: integer
+        unit:
+          type: string
+        categoryId:
+          type: integer
+        status:
+          type: string
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              publicId:
+                type: string
+            required:
+              - url
+              - publicId
+      required:
+        - name
+        - price
+
+    ReviewWithUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeId:
+          type: integer
+        userId:
+          type: integer
+        rating:
+          type: integer
+        comment:
+          type: string
+          nullable: true
+        isVisible:
+          type: boolean
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        user:
+          $ref: "#/components/schemas/UserPublic"
+      required:
+        - id
+        - storeId
+        - userId
+        - rating
+
+    CreateReviewRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+      required:
+        - rating
+
+    SearchResults:
+      type: object
+      properties:
+        stores:
+          type: array
+          items:
+            $ref: "#/components/schemas/Store"
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductWithImages"
+        query:
+          type: string
+      required:
+        - stores
+        - products
+        - query
+
+    Banner:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        subtitle:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+        publicId:
+          type: string
+          nullable: true
+        linkUrl:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+          nullable: true
+        sortOrder:
+          type: integer
+          nullable: true
+      required:
+        - id
+        - imageUrl
+
+    CreateBannerRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        imageUrl:
+          type: string
+        publicId:
+          type: string
+        linkUrl:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+      required:
+        - imageUrl
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalStores:
+          type: integer
+        activeStores:
+          type: integer
+        pendingStores:
+          type: integer
+        totalProducts:
+          type: integer
+        totalReviews:
+          type: integer
+      required:
+        - totalUsers
+        - totalStores
+        - activeStores
+        - pendingStores
+        - totalProducts
+        - totalReviews
+
+    UpdateUserRoleRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, vendor, admin]
+      required:
+        - role

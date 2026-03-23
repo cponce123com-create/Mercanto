@@ -1,0 +1,42 @@
+export const DISTRICTS = [
+  "San Ramón",
+  "La Merced",
+  "Pichanaqui",
+  "San Luis de Shuaro",
+  "Vitoc",
+  "Perené",
+  "Satipo",
+  "Mazamari",
+  "San Martín de Pangoa",
+  "Río Negro",
+  "Tarma",
+  "Jauja",
+  "Huancayo",
+  "El Tambo",
+  "Chilca"
+];
+
+export const CATEGORIES_WITH_ICONS: Record<string, string> = {
+  "Frutas y Verduras": "🍎",
+  "Café y Cacao": "☕",
+  "Miel y Apicultura": "🍯",
+  "Plantas y Hierbas": "🌿",
+  "Carnes y Pescados": "🥩",
+  "Panadería y Pasteles": "🥐",
+  "Abarrotes y Bodega": "🛒",
+  "Bebidas y Jugos": "🧃",
+  "Ropa y Calzado": "👗",
+  "Artesanía": "🧶",
+  "Ferretería y Construcción": "🔧",
+  "Farmacia y Salud": "💊",
+  "Belleza y Cuidado Personal": "💄",
+  "Electrónica y Tecnología": "📱",
+  "Hogar y Muebles": "🏠",
+  "Mascotas": "🐾",
+  "Transporte y Movilidad": "🚐",
+  "Servicios Técnicos": "🛠️",
+  "Educación y Cursos": "📚",
+  "Turismo y Hospedaje": "🏕️",
+  "Agricultura e Insumos": "🌾",
+  "Otros": "📦"
+};

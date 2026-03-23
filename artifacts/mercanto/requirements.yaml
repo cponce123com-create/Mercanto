@@ -1,0 +1,24 @@
+packages:
+  "framer-motion": "For page transitions and interactive micro-animations"
+  "react-hook-form": "For form state management"
+  "@hookform/resolvers": "For Zod integration with react-hook-form"
+  "zod": "For form validation schemas"
+  "date-fns": "For formatting dates in reviews and dashboards"
+  "use-debounce": "For search input debouncing"
+  "lucide-react": "For UI icons"
+
+images:
+  - path: "artifacts/mercanto/public/images/hero-marketplace.png"
+    description: "A beautiful, vibrant tropical outdoor marketplace in the jungle, warm sunlight, stalls with fruits and coffee, highly detailed, stylized digital illustration, green and amber tones"
+    aspect_ratio: "16:9"
+  - path: "artifacts/mercanto/public/images/map-placeholder.png"
+    description: "A stylized, illustrated map of a tropical region with winding rivers and green mountains, minimalist UI style, UI map background"
+    aspect_ratio: "16:9"
+  - path: "artifacts/mercanto/public/images/store-placeholder.png"
+    description: "A charming wooden store front in a tropical town, vector illustration flat style, warm colors"
+    aspect_ratio: "4:3"
+
+notes:
+  - "Assuming @workspace/api-client-react is correctly configured and provides the hooks."
+  - "Will use Framer Motion for smooth layout transitions."
+  - "Implementing context for Global District selection and Auth state."

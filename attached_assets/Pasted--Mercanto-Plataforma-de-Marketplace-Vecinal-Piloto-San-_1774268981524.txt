@@ -1,0 +1,587 @@
+🛍️ Mercanto — Plataforma de Marketplace Vecinal
+Piloto: San Ramón, Chanchamayo, Junín — Perú
+Visión del producto
+Mercanto es una plataforma web donde los vecinos y comerciantes de la provincia de Chanchamayo pueden crear su tienda local, publicar sus productos y ser descubiertos por otros vecinos. El diferencial principal es el mapa interactivo donde cualquier persona puede ver todas las tiendas activas de su zona, filtrarlas por distrito o categoría, y contactar directamente al vendedor por WhatsApp.
+No es un e-commerce tradicional con carrito y pagos online. Es un directorio comercial vivo con catálogo de productos, donde el cierre de la venta ocurre por WhatsApp o en persona. Pensado para la realidad del comercio local de la selva central peruana: mercados, productores agrícolas, artesanos, tiendas de barrio y emprendedores locales.
+
+Stack tecnológico
+Frontend
+
+React 19 con TypeScript
+Vite como bundler
+TailwindCSS v4 para estilos
+shadcn/ui para componentes de UI (botones, modales, inputs, cards, tabs, etc.)
+TanStack Query v5 para manejo de estado del servidor
+tRPC React Query para consumir la API de forma typesafe
+Wouter para routing del lado del cliente
+React Hook Form + Zod para formularios y validación
+Framer Motion para animaciones suaves
+Recharts para gráficas en el panel admin
+Lucide React para iconos
+Sonner para notificaciones toast
+next-themes para modo oscuro/claro
+
+Backend
+
+Node.js con TypeScript
+Express como servidor HTTP
+tRPC para la capa de API (typesafe end-to-end)
+Drizzle ORM para interacción con la base de datos
+PostgreSQL como base de datos
+bcrypt para hasheo de contraseñas
+jose para manejo de JWT
+cookie para manejo de sesiones via cookies HTTP-only
+Cloudinary SDK para gestión de imágenes
+dotenv para variables de entorno
+nanoid para generación de slugs únicos
+esbuild para compilar el servidor
+
+Infraestructura
+
+Render para deploy (un solo Web Service)
+Render PostgreSQL como base de datos
+Cloudinary para almacenamiento de imágenes
+Google Maps JavaScript API para mapas
+
+
+Estructura del proyecto
+/                                ← raíz del monorepo
+├── client/                      ← todo el frontend React
+│   ├── index.html
+│   └── src/
+│       ├── main.tsx             ← entry point, providers globales
+│       ├── App.tsx              ← router principal
+│       ├── pages/
+│       │   ├── Home.tsx
+│       │   ├── Stores.tsx
+│       │   ├── StoreDetail.tsx
+│       │   ├── Map.tsx
+│       │   ├── Search.tsx
+│       │   ├── Login.tsx
+│       │   ├── Register.tsx
+│       │   ├── Profile.tsx
+│       │   ├── CreateStore.tsx
+│       │   ├── VendorDashboard.tsx
+│       │   ├── VendorProducts.tsx
+│       │   ├── VendorEditStore.tsx
+│       │   └── admin/
+│       │       ├── AdminDashboard.tsx
+│       │       ├── AdminStores.tsx
+│       │       ├── AdminUsers.tsx
+│       │       └── AdminCategories.tsx
+│       ├── components/
+│       │   ├── layout/
+│       │   │   ├── Header.tsx
+│       │   │   ├── Footer.tsx
+│       │   │   └── MobileNav.tsx
+│       │   ├── StoreCard.tsx
+│       │   ├── ProductCard.tsx
+│       │   ├── StoreMap.tsx
+│       │   ├── MapMarker.tsx
+│       │   ├── StorePopup.tsx
+│       │   ├── DistrictSelector.tsx
+│       │   ├── CategoryFilter.tsx
+│       │   ├── ImageUploader.tsx
+│       │   ├── ProductForm.tsx
+│       │   ├── StoreForm.tsx
+│       │   └── ui/              ← componentes shadcn/ui
+│       ├── lib/
+│       │   ├── trpc.ts
+│       │   ├── queryClient.ts
+│       │   ├── utils.ts
+│       │   └── constants.ts
+│       └── hooks/
+│           ├── useDistrict.ts
+│           ├── useAuth.ts
+│           └── useGeolocation.ts
+├── server/
+│   ├── _core/
+│   │   ├── index.ts
+│   │   ├── trpc.ts
+│   │   ├── context.ts
+│   │   ├── auth.ts
+│   │   ├── vite.ts
+│   │   ├── env.ts
+│   │   └── errors.ts
+│   ├── routers/
+│   │   ├── index.ts
+│   │   ├── auth.ts
+│   │   ├── stores.ts
+│   │   ├── products.ts
+│   │   ├── categories.ts
+│   │   ├── upload.ts
+│   │   ├── search.ts
+│   │   └── admin.ts
+│   └── db/
+│       ├── index.ts
+│       ├── schema.ts
+│       └── queries/
+│           ├── users.ts
+│           ├── stores.ts
+│           ├── products.ts
+│           └── categories.ts
+├── shared/
+│   ├── types.ts
+│   ├── constants.ts
+│   └── validators.ts
+├── drizzle/
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── drizzle.config.ts
+└── render.yaml
+
+Base de datos — Schema completo
+Tabla users
+id               serial PRIMARY KEY
+name             text NOT NULL
+email            text UNIQUE NOT NULL
+password_hash    text NOT NULL
+role             text DEFAULT 'user'   -- 'user' | 'vendor' | 'admin'
+avatar_url       text
+phone            text
+district         text
+is_blocked       boolean DEFAULT false
+created_at       timestamp DEFAULT now()
+updated_at       timestamp DEFAULT now()
+last_signed_in   timestamp DEFAULT now()
+Tabla categories
+id               serial PRIMARY KEY
+name             text NOT NULL
+slug             text UNIQUE NOT NULL
+icon             text
+description      text
+parent_id        integer
+is_active        boolean DEFAULT true
+sort_order       integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+Tabla stores
+id               serial PRIMARY KEY
+user_id          integer NOT NULL → users.id
+name             text NOT NULL
+slug             text UNIQUE NOT NULL
+description      text
+logo_url         text
+logo_public_id   text
+banner_url       text
+banner_public_id text
+category_id      integer → categories.id
+location         text
+district         text
+lat              numeric(10,7)
+lng              numeric(10,7)
+whatsapp         text
+instagram        text
+facebook         text
+website          text
+status           text DEFAULT 'pending'
+is_featured      boolean DEFAULT false
+total_visits     integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+updated_at       timestamp DEFAULT now()
+Tabla products
+id               serial PRIMARY KEY
+store_id         integer NOT NULL → stores.id
+category_id      integer → categories.id
+name             text NOT NULL
+slug             text UNIQUE NOT NULL
+description      text
+price            numeric(10,2) NOT NULL
+offer_price      numeric(10,2)
+stock            integer DEFAULT 0
+unit             text DEFAULT 'unidad'
+status           text DEFAULT 'active'
+sort_order       integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+updated_at       timestamp DEFAULT now()
+Tabla product_images
+id               serial PRIMARY KEY
+product_id       integer NOT NULL → products.id
+url              text NOT NULL
+public_id        text NOT NULL
+sort_order       integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+Tabla store_gallery_images
+id               serial PRIMARY KEY
+store_id         integer NOT NULL → stores.id
+url              text NOT NULL
+public_id        text NOT NULL
+sort_order       integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+Tabla banners
+id               serial PRIMARY KEY
+title            text
+subtitle         text
+image_url        text NOT NULL
+public_id        text
+link_url         text
+is_active        boolean DEFAULT true
+sort_order       integer DEFAULT 0
+created_at       timestamp DEFAULT now()
+Tabla reviews
+id               serial PRIMARY KEY
+store_id         integer NOT NULL → stores.id
+user_id          integer NOT NULL → users.id
+rating           integer NOT NULL
+comment          text
+is_visible       boolean DEFAULT true
+created_at       timestamp DEFAULT now()
+
+Roles y permisos
+Visitante
+
+Ver tiendas activas, productos, mapa, buscar
+
+Usuario registrado (role: 'user')
+
+Editar perfil, dejar reseñas, reportar precios
+
+Vendor (role: 'vendor')
+
+Crear y gestionar su tienda y hasta 30 productos con hasta 5 fotos cada uno
+
+Admin (role: 'admin')
+
+Gestión completa: aprobar tiendas, gestionar usuarios, categorías, banners y estadísticas
+
+
+Páginas y funcionalidades detalladas
+/ — Home
+
+Hero con buscador central, frase de bienvenida orientada a Chanchamayo y selector de distrito
+Banners rotativos
+Sección de categorías con iconos
+Sección "Tiendas destacadas"
+Sección "Tiendas nuevas"
+Sección "Explorar en el mapa" con preview y CTA
+Footer
+
+/stores — Directorio de tiendas
+
+Grid de tiendas activas
+Filtro por categoría, distrito, búsqueda y orden
+Cada card: logo, banner, nombre, categoría, distrito, descripción corta, botón WhatsApp
+
+/map — Mapa interactivo ⭐
+
+Google Maps centrado por defecto en San Ramón, Chanchamayo (coordenadas: -11.1297° S, -75.3500° W, zoom 12)
+Marcadores de todas las tiendas activas con coordenadas
+Marcadores con color diferente por categoría
+Click en marcador → popup con logo, nombre, categoría, distrito, descripción corta, botón "Ver tienda" y botón WhatsApp
+Panel lateral con lista de tiendas visibles en el área del mapa
+Filtros: por categoría, por distrito
+Botón "Mi ubicación"
+Clustering automático cuando hay muchos marcadores juntos
+Al seleccionar distrito en el header, el mapa se recentra en ese distrito
+
+/store/:slug — Detalle de tienda
+
+Banner, logo, nombre, categoría, distrito, descripción
+Botón WhatsApp prominente y redes sociales
+Mini mapa con ubicación exacta
+Grid de productos filtrables por categoría
+Galería de fotos
+Reseñas con rating promedio
+Formulario para dejar reseña (requiere login)
+
+/search — Búsqueda global
+
+Resultados de tiendas y productos en tiempo real
+Filtro por tipo de resultado
+
+/login y /register
+
+Formularios con validación
+Redirección según rol tras login
+
+/profile
+
+Editar nombre, teléfono, distrito, avatar
+Ver reseñas propias
+
+/create-store
+
+Stepper de 3 pasos:
+
+Información básica (nombre, categoría, descripción)
+Ubicación (dirección, distrito, picker en mapa para lat/lng — centrado en San Ramón por defecto)
+Contacto (WhatsApp, Instagram, Facebook, web)
+
+
+Slug generado automáticamente
+Queda en status: 'pending'
+
+/vendor — Dashboard del Vendor
+
+Resumen: productos, visitas, estado
+Accesos rápidos
+
+/vendor/store — Editar tienda
+
+Formulario prellenado
+Subir logo y banner
+Mapa para ajustar ubicación
+
+/vendor/products — Gestionar productos
+
+Tabla con foto, nombre, precio, estado
+Límite visual 30/30
+Toggle activo/inactivo, editar, eliminar
+
+/vendor/products/new y /vendor/products/:id/edit
+
+Campos del producto + subida de hasta 5 fotos con drag & drop
+
+/admin — Panel admin
+
+Métricas globales y gráficas
+
+/admin/stores
+
+Tabla de tiendas con acciones: aprobar, rechazar, destacar
+
+/admin/users
+
+Tabla de usuarios con acciones: cambiar rol, bloquear
+
+/admin/categories
+
+CRUD de categorías
+
+/admin/banners
+
+CRUD de banners con preview
+
+
+API — Routers tRPC
+auth
+
+register, login, logout, me
+
+stores
+
+listStores — con filtros de distrito, categoría, búsqueda, orden y paginación
+listStoresForMap — solo tiendas con lat/lng para el mapa
+getStoreBySlug
+getMyStore
+createStore
+updateStore
+incrementVisit
+
+products
+
+getProductsByStore
+getProductsByStoreForVendor
+getProductBySlug
+createProduct
+updateProduct
+deleteProduct
+toggleProductStatus
+reorderProductImages
+
+categories
+
+listCategories
+
+search
+
+search
+
+upload
+
+getUploadSignature
+deleteImage
+
+reviews
+
+getStoreReviews
+createReview
+deleteReview
+
+admin
+
+getStats, listAllStores, updateStoreStatus, listAllUsers, updateUserRole, toggleUserBlock, listCategories, createCategory, updateCategory, listBanners, createBanner, updateBanner, deleteBanner
+
+
+Header y selector de distrito
+
+Logo Mercanto a la izquierda
+Selector de distrito en el centro con los distritos de Chanchamayo — al seleccionar filtra toda la app y persiste en localStorage
+Buscador rápido
+Navegación: Inicio, Tiendas, Mapa
+Auth: Login/Register o avatar + menú dropdown (Perfil, Mi Tienda, Cerrar Sesión)
+Móvil: hamburger con drawer lateral
+
+
+Distritos de Chanchamayo y zonas aledañas (datos fijos en frontend)
+typescriptexport const DISTRICTS = [
+  // Provincia de Chanchamayo - Junín
+  "San Ramón",
+  "La Merced",
+  "Pichanaqui",
+  "San Luis de Shuaro",
+  "Vitoc",
+  "Perené",
+  // Provincia de Satipo - Junín (cercana)
+  "Satipo",
+  "Mazamari",
+  "San Martín de Pangoa",
+  "Río Negro",
+  "Río Tambo",
+  "Coviriali",
+  "Llaylla",
+  // Provincia de Tarma - Junín (acceso por la sierra)
+  "Tarma",
+  "Acobamba",
+  "Huasahuasi",
+  "La Unión",
+  "Palca",
+  "Palcamayo",
+  "San Pedro de Cajas",
+  "Steccato",
+  // Provincia de Jauja - Junín
+  "Jauja",
+  "Ataura",
+  "Canchayllo",
+  "Molinos",
+  "Monobamba",
+  "Muqui",
+  "Pancán",
+  "Pomacancha",
+  "Sincos",
+  "Yauli",
+  // Huancayo (capital regional, referencia importante)
+  "Huancayo",
+  "El Tambo",
+  "Chilca",
+];
+
+Coordenadas de referencia por distrito para el mapa
+typescriptexport const DISTRICT_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "San Ramón":             { lat: -11.1297, lng: -75.3500 },
+  "La Merced":             { lat: -11.0567, lng: -75.3247 },
+  "Pichanaqui":            { lat: -10.9333, lng: -75.0167 },
+  "San Luis de Shuaro":    { lat: -10.9833, lng: -75.2667 },
+  "Vitoc":                 { lat: -11.2167, lng: -75.3000 },
+  "Perené":                { lat: -10.9500, lng: -75.2833 },
+  "Satipo":                { lat: -11.2567, lng: -74.6383 },
+  "Mazamari":              { lat: -11.3167, lng: -74.5333 },
+  "San Martín de Pangoa":  { lat: -11.4167, lng: -74.4833 },
+  "Río Negro":             { lat: -11.3667, lng: -74.5500 },
+  "Tarma":                 { lat: -11.4186, lng: -75.6894 },
+  "Jauja":                 { lat: -11.7789, lng: -75.4972 },
+  "Huancayo":              { lat: -12.0651, lng: -75.2049 },
+};
+```
+
+El mapa arranca centrado en San Ramón con zoom 11 para mostrar toda la provincia de Chanchamayo.
+
+---
+
+## Categorías iniciales orientadas a Chanchamayo
+
+Estas categorías reflejan la realidad comercial de la selva central peruana:
+```
+Frutas y Verduras 🍎          ← producción local: naranja, piña, maracuyá, yuca
+Café y Cacao ☕               ← producto estrella de Chanchamayo
+Miel y Apicultura 🍯          ← muy presente en la zona
+Plantas y Hierbas 🌿          ← medicinales, aromáticas
+Carnes y Pescados 🥩          ← carne de res, cerdo, pescado de río
+Panadería y Pasteles 🥐
+Abarrotes y Bodega 🛒
+Bebidas y Jugos 🧃
+Ropa y Calzado 👗
+Artesanía 🧶                  ← productos típicos, tejidos, cerámica
+Ferretería y Construcción 🔧
+Farmacia y Salud 💊
+Belleza y Cuidado Personal 💄
+Electrónica y Tecnología 📱
+Hogar y Muebles 🏠
+Mascotas 🐾
+Transporte y Movilidad 🚐     ← mototaxis, autos, servicios de traslado
+Servicios Técnicos 🛠️         ← electricistas, plomeros, mecánicos
+Educación y Cursos 📚
+Turismo y Hospedaje 🏕️        ← lodges, guías, paquetes turísticos
+Agricultura e Insumos 🌾      ← semillas, fertilizantes, herramientas
+Otros 📦
+```
+
+---
+
+## Datos semilla (seed) para el piloto
+
+Al correr `pnpm db:seed` debe insertar:
+
+**1 usuario admin:**
+```
+email: admin@mercanto.pe
+password: Admin2024!
+role: admin
+name: Administrador Mercanto
+district: San Ramón
+```
+
+**Todas las categorías** de la lista anterior con sus iconos y slugs.
+
+**8 tiendas de ejemplo** activas distribuidas en San Ramón, La Merced y Pichanaqui, con coordenadas reales de esos distritos, para que el mapa no se vea vacío desde el primer día.
+
+---
+
+## Reglas de negocio
+
+1. Un usuario solo puede tener **una tienda**
+2. Una tienda puede tener **máximo 30 productos**
+3. Un producto puede tener **máximo 5 fotos**
+4. Las tiendas nuevas quedan en `status: 'pending'` hasta aprobación del admin
+5. Solo tiendas con `status: 'active'` aparecen en el mapa y directorio público
+6. El slug se genera automáticamente desde el nombre con sufijo numérico si ya existe
+7. Al eliminar un producto sus imágenes se eliminan de Cloudinary
+8. Al eliminar una tienda (solo admin) sus productos e imágenes se eliminan en cascada
+9. El vendor puede ver su tienda en `pending` pero no es pública
+10. Un usuario bloqueado no puede hacer login
+
+---
+
+## Variables de entorno
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=clave-secreta-larga-aleatoria
+SESSION_SECRET=otra-clave-secreta
+CLOUDINARY_CLOUD_NAME=tu-cloud-name
+CLOUDINARY_API_KEY=tu-api-key
+CLOUDINARY_API_SECRET=tu-api-secret
+GOOGLE_MAPS_API_KEY=tu-api-key
+NODE_ENV=production
+PORT=3000
+
+Scripts en package.json
+json{
+  "dev":      "NODE_ENV=development tsx watch server/_core/index.ts",
+  "build":    "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+  "start":    "NODE_ENV=production node dist/index.js",
+  "db:push":  "drizzle-kit push",
+  "db:seed":  "tsx server/db/seed.ts"
+}
+
+render.yaml
+yamlservices:
+  - type: web
+    name: mercanto
+    runtime: node
+    buildCommand: pnpm install && pnpm build && pnpm db:push && pnpm db:seed
+    startCommand: NODE_ENV=production node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mercanto-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+
+databases:
+  - name: mercanto-db
+    plan: free
