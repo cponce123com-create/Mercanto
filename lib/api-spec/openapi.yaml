@@ -25,6 +25,8 @@ tags:
     description: Admin operations
   - name: banners
     description: Banner operations
+  - name: favorites
+    description: Favorites operations
 
 paths:
   /healthz:
@@ -191,6 +193,18 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: lat
+          in: query
+          schema:
+            type: number
+        - name: lng
+          in: query
+          schema:
+            type: number
+        - name: radiusKm
+          in: query
+          schema:
+            type: number
       responses:
         "200":
           description: List of stores
@@ -854,6 +868,62 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /favorites:
+    get:
+      operationId: getFavorites
+      tags: [favorites]
+      summary: Get current user's favorite stores
+      responses:
+        "200":
+          description: Favorite stores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoritesResponse"
+        "401":
+          description: Unauthorized
+
+  /favorites/{storeId}:
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Add a store to favorites (idempotent)
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove a store from favorites
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed from favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Unauthorized
+
 components:
   schemas:
     HealthStatus:
@@ -1109,6 +1179,22 @@ components:
         category:
           $ref: "#/components/schemas/Category"
           nullable: true
+        paymentMethods:
+          type: array
+          items:
+            type: string
+          nullable: true
+        openingHours:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+        doesDelivery:
+          type: boolean
+          nullable: true
+        deliveryRadius:
+          type: integer
+          nullable: true
       required:
         - id
         - userId
@@ -1222,6 +1308,18 @@ components:
           type: string
         bannerPublicId:
           type: string
+        paymentMethods:
+          type: array
+          items:
+            type: string
+        openingHours:
+          type: object
+          additionalProperties:
+            type: string
+        doesDelivery:
+          type: boolean
+        deliveryRadius:
+          type: integer
       required:
         - name
 
@@ -1504,3 +1602,18 @@ components:
           enum: [user, vendor, admin]
       required:
         - role
+
+    FavoritesResponse:
+      type: object
+      properties:
+        favorites:
+          type: array
+          items:
+            $ref: "#/components/schemas/Store"
+        favoriteIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - favorites
+        - favoriteIds

@@ -15,4 +15,7 @@ export type ListStoresParams = {
   page?: number;
   limit?: number;
   featured?: boolean;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
 };

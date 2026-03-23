@@ -11,11 +11,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Save, Store, MapPin, Phone, Globe, Instagram, Facebook, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Store, MapPin, Phone, Globe, Instagram, Facebook, Image as ImageIcon, CreditCard, Clock, Truck } from "lucide-react";
 import { useCloudinaryUpload } from "@/lib/useCloudinaryUpload";
 import { DISTRICTS } from "@/lib/constants";
 
 const NO_CATEGORY = "__none__";
+
+const PAYMENT_OPTIONS = [
+  { id: "efectivo", label: "Efectivo" },
+  { id: "yape", label: "Yape" },
+  { id: "plin", label: "Plin" },
+  { id: "transferencia", label: "Transferencia bancaria" },
+  { id: "visa", label: "Tarjeta Visa/Mastercard" },
+  { id: "contra_entrega", label: "Contra entrega" },
+];
+
+const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 interface StoreForm {
   name: string;
@@ -31,6 +42,10 @@ interface StoreForm {
   logoPublicId: string;
   bannerUrl: string;
   bannerPublicId: string;
+  paymentMethods: string[];
+  openingHours: Record<string, string>;
+  doesDelivery: boolean;
+  deliveryRadius: string;
 }
 
 function ImageField({
@@ -93,10 +108,12 @@ export default function VendorStoreSettings() {
     location: "", district: "", whatsapp: "",
     instagram: "", facebook: "", website: "",
     logoUrl: "", logoPublicId: "", bannerUrl: "", bannerPublicId: "",
+    paymentMethods: [], openingHours: {}, doesDelivery: false, deliveryRadius: "",
   });
 
   useEffect(() => {
     if (store) {
+      const s = store as any;
       setForm({
         name: store.name || "",
         description: store.description || "",
@@ -111,6 +128,10 @@ export default function VendorStoreSettings() {
         logoPublicId: "",
         bannerUrl: store.bannerUrl || "",
         bannerPublicId: "",
+        paymentMethods: Array.isArray(s.paymentMethods) ? s.paymentMethods : [],
+        openingHours: (s.openingHours && typeof s.openingHours === "object") ? s.openingHours : {},
+        doesDelivery: s.doesDelivery ?? false,
+        deliveryRadius: s.deliveryRadius?.toString() || "",
       });
     }
   }, [store]);
@@ -143,6 +164,19 @@ export default function VendorStoreSettings() {
     }
   };
 
+  const togglePayment = (id: string) => {
+    setForm(f => ({
+      ...f,
+      paymentMethods: f.paymentMethods.includes(id)
+        ? f.paymentMethods.filter(m => m !== id)
+        : [...f.paymentMethods, id],
+    }));
+  };
+
+  const handleHours = (day: string, value: string) => {
+    setForm(f => ({ ...f, openingHours: { ...f.openingHours, [day]: value } }));
+  };
+
   const handleSave = () => {
     if (!store?.slug) return;
     updateMutation.mutate({
@@ -161,7 +195,11 @@ export default function VendorStoreSettings() {
         logoPublicId: form.logoPublicId || undefined,
         bannerUrl: form.bannerUrl || undefined,
         bannerPublicId: form.bannerPublicId || undefined,
-      },
+        paymentMethods: form.paymentMethods as any,
+        openingHours: Object.keys(form.openingHours).length > 0 ? (form.openingHours as any) : undefined,
+        doesDelivery: form.doesDelivery,
+        deliveryRadius: form.deliveryRadius ? Number(form.deliveryRadius) : undefined,
+      } as any,
     });
   };
 
@@ -301,6 +339,78 @@ export default function VendorStoreSettings() {
               onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
               placeholder="Jr. Progreso 123, mercado central..."
             />
+          </div>
+        </div>
+
+        {/* Delivery */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="font-semibold flex items-center gap-2 mb-1">
+            <Truck className="w-4 h-4" /> Delivery
+          </h2>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.doesDelivery}
+              onChange={e => setForm(f => ({ ...f, doesDelivery: e.target.checked }))}
+              className="w-4 h-4 accent-primary rounded"
+            />
+            <span className="text-sm font-medium">Ofrezco servicio de delivery</span>
+          </label>
+          {form.doesDelivery && (
+            <div className="space-y-1.5">
+              <Label>Radio de cobertura (km)</Label>
+              <Input
+                type="number"
+                min="1"
+                max="100"
+                value={form.deliveryRadius}
+                onChange={e => setForm(f => ({ ...f, deliveryRadius: e.target.value }))}
+                placeholder="Ej: 5"
+                className="max-w-[140px]"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Payment methods */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="font-semibold flex items-center gap-2 mb-1">
+            <CreditCard className="w-4 h-4" /> Métodos de Pago
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-2">Selecciona los métodos que aceptas</p>
+          <div className="grid grid-cols-2 gap-2">
+            {PAYMENT_OPTIONS.map(opt => (
+              <label key={opt.id} className="flex items-center gap-2.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={form.paymentMethods.includes(opt.id)}
+                  onChange={() => togglePayment(opt.id)}
+                  className="w-4 h-4 accent-primary rounded"
+                />
+                <span className="text-sm text-gray-700 group-hover:text-primary transition-colors">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Opening hours */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="font-semibold flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4" /> Horario de Atención
+          </h2>
+          <p className="text-xs text-muted-foreground -mt-2">Ej: "8:00 - 18:00" o "Cerrado"</p>
+          <div className="space-y-2">
+            {DAYS.map(day => (
+              <div key={day} className="flex items-center gap-3">
+                <span className="text-sm text-gray-600 w-24 shrink-0">{day}</span>
+                <Input
+                  value={form.openingHours[day] || ""}
+                  onChange={e => handleHours(day, e.target.value)}
+                  placeholder="8:00 - 18:00"
+                  className="text-sm"
+                />
+              </div>
+            ))}
           </div>
         </div>
 

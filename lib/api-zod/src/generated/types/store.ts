@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Category } from "./category";
+import type { StoreOpeningHours } from "./storeOpeningHours";
 
 export interface Store {
   id: number;
@@ -30,4 +31,8 @@ export interface Store {
   createdAt?: Date | null;
   updatedAt?: Date | null;
   category?: Category | null;
+  paymentMethods?: string[] | null;
+  openingHours?: StoreOpeningHours;
+  doesDelivery?: boolean | null;
+  deliveryRadius?: number | null;
 }

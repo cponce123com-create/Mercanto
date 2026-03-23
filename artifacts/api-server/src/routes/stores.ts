@@ -4,6 +4,16 @@ import { eq, and, ilike, or, desc, asc, sql, isNotNull, count, inArray } from "d
 import { requireAuth, requireVendor, optionalAuth } from "../lib/auth.js";
 import { generateUniqueStoreSlug } from "../lib/slug.js";
 
+function parsePaymentMethods(raw: string | null): string[] {
+  if (!raw) return [];
+  try { return JSON.parse(raw); } catch { return []; }
+}
+
+function parseOpeningHours(raw: string | null): Record<string, string> | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
 const router: IRouter = Router();
 
 router.get("/map", async (req, res) => {
@@ -76,30 +86,49 @@ router.get("/my", requireVendor, async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const { district, category, search, sort, page: pageStr, limit: limitStr, featured } = req.query as Record<string, string>;
+    const { district, category, search, sort, page: pageStr, limit: limitStr, featured, lat: latStr, lng: lngStr, radiusKm: radiusStr } = req.query as Record<string, string>;
     const page = Math.max(1, parseInt(pageStr || "1"));
     const limit = Math.min(50, parseInt(limitStr || "12"));
     const offset = (page - 1) * limit;
 
+    const userLat = latStr ? parseFloat(latStr) : null;
+    const userLng = lngStr ? parseFloat(lngStr) : null;
+    const radiusKm = radiusStr ? parseFloat(radiusStr) : 10;
+
     const conditions = [eq(storesTable.status, "active")];
     if (district) conditions.push(eq(storesTable.district, district));
     if (featured === "true") conditions.push(eq(storesTable.isFeatured, true));
+    if (userLat !== null && userLng !== null) {
+      conditions.push(isNotNull(storesTable.lat));
+      conditions.push(isNotNull(storesTable.lng));
+      conditions.push(sql`(
+        6371 * acos(
+          cos(radians(${userLat})) * cos(radians(${storesTable.lat})) *
+          cos(radians(${storesTable.lng}) - radians(${userLng})) +
+          sin(radians(${userLat})) * sin(radians(${storesTable.lat}))
+        )
+      ) <= ${radiusKm}`);
+    }
 
     const whereClause = and(...conditions);
 
+    const storeSelectFields = {
+      id: storesTable.id, userId: storesTable.userId, name: storesTable.name,
+      slug: storesTable.slug, description: storesTable.description,
+      logoUrl: storesTable.logoUrl, bannerUrl: storesTable.bannerUrl,
+      categoryId: storesTable.categoryId, location: storesTable.location,
+      district: storesTable.district, lat: storesTable.lat, lng: storesTable.lng,
+      whatsapp: storesTable.whatsapp, instagram: storesTable.instagram,
+      facebook: storesTable.facebook, website: storesTable.website,
+      status: storesTable.status, isFeatured: storesTable.isFeatured,
+      totalVisits: storesTable.totalVisits, createdAt: storesTable.createdAt, updatedAt: storesTable.updatedAt,
+      paymentMethods: storesTable.paymentMethods, openingHours: storesTable.openingHours,
+      doesDelivery: storesTable.doesDelivery, deliveryRadius: storesTable.deliveryRadius,
+      categoryName: categoriesTable.name, categorySlug: categoriesTable.slug, categoryIcon: categoriesTable.icon,
+    };
+
     let query = db
-      .select({
-        id: storesTable.id, userId: storesTable.userId, name: storesTable.name,
-        slug: storesTable.slug, description: storesTable.description,
-        logoUrl: storesTable.logoUrl, bannerUrl: storesTable.bannerUrl,
-        categoryId: storesTable.categoryId, location: storesTable.location,
-        district: storesTable.district, lat: storesTable.lat, lng: storesTable.lng,
-        whatsapp: storesTable.whatsapp, instagram: storesTable.instagram,
-        facebook: storesTable.facebook, website: storesTable.website,
-        status: storesTable.status, isFeatured: storesTable.isFeatured,
-        totalVisits: storesTable.totalVisits, createdAt: storesTable.createdAt, updatedAt: storesTable.updatedAt,
-        categoryName: categoriesTable.name, categorySlug: categoriesTable.slug, categoryIcon: categoriesTable.icon,
-      })
+      .select(storeSelectFields)
       .from(storesTable)
       .leftJoin(categoriesTable, eq(storesTable.categoryId, categoriesTable.id))
       .where(whereClause)
@@ -107,18 +136,7 @@ router.get("/", async (req, res) => {
 
     if (search) {
       query = db
-        .select({
-          id: storesTable.id, userId: storesTable.userId, name: storesTable.name,
-          slug: storesTable.slug, description: storesTable.description,
-          logoUrl: storesTable.logoUrl, bannerUrl: storesTable.bannerUrl,
-          categoryId: storesTable.categoryId, location: storesTable.location,
-          district: storesTable.district, lat: storesTable.lat, lng: storesTable.lng,
-          whatsapp: storesTable.whatsapp, instagram: storesTable.instagram,
-          facebook: storesTable.facebook, website: storesTable.website,
-          status: storesTable.status, isFeatured: storesTable.isFeatured,
-          totalVisits: storesTable.totalVisits, createdAt: storesTable.createdAt, updatedAt: storesTable.updatedAt,
-          categoryName: categoriesTable.name, categorySlug: categoriesTable.slug, categoryIcon: categoriesTable.icon,
-        })
+        .select(storeSelectFields)
         .from(storesTable)
         .leftJoin(categoriesTable, eq(storesTable.categoryId, categoriesTable.id))
         .where(and(eq(storesTable.status, "active"),
@@ -171,6 +189,10 @@ function mapStore(s: any) {
     facebook: s.facebook, website: s.website, status: s.status,
     isFeatured: s.isFeatured, totalVisits: s.totalVisits,
     createdAt: s.createdAt, updatedAt: s.updatedAt,
+    paymentMethods: parsePaymentMethods(s.paymentMethods),
+    openingHours: parseOpeningHours(s.openingHours),
+    doesDelivery: s.doesDelivery ?? false,
+    deliveryRadius: s.deliveryRadius ?? null,
     category: s.categoryId ? { id: s.categoryId, name: s.categoryName, slug: s.categorySlug, icon: s.categoryIcon } : null,
   };
 }
@@ -183,7 +205,7 @@ router.post("/", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Bad Request", message: "You already have a store" });
       return;
     }
-    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId } = req.body;
+    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId, paymentMethods, openingHours, doesDelivery, deliveryRadius } = req.body;
     if (!name) {
       res.status(400).json({ error: "Bad Request", message: "name is required" });
       return;
@@ -192,6 +214,10 @@ router.post("/", requireAuth, async (req, res) => {
     const [store] = await db.insert(storesTable).values({
       userId, name, slug, description, categoryId, location, district, lat, lng,
       whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId,
+      paymentMethods: paymentMethods ? JSON.stringify(paymentMethods) : null,
+      openingHours: openingHours ? JSON.stringify(openingHours) : null,
+      doesDelivery: doesDelivery ?? false,
+      deliveryRadius: deliveryRadius ?? null,
       status: "pending",
     }).returning();
     // Only upgrade to vendor if user is a plain user (don't downgrade admins)
@@ -276,9 +302,16 @@ router.put("/:slug", requireAuth, async (req, res) => {
       res.status(403).json({ error: "Forbidden", message: "Not your store" });
       return;
     }
-    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId } = req.body;
+    const { name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId, paymentMethods, openingHours, doesDelivery, deliveryRadius } = req.body;
     const [updated] = await db.update(storesTable)
-      .set({ name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website, logoUrl, logoPublicId, bannerUrl, bannerPublicId, updatedAt: new Date() })
+      .set({
+        name, description, categoryId, location, district, lat, lng, whatsapp, instagram, facebook, website,
+        logoUrl, logoPublicId, bannerUrl, bannerPublicId, updatedAt: new Date(),
+        ...(paymentMethods !== undefined && { paymentMethods: JSON.stringify(paymentMethods) }),
+        ...(openingHours !== undefined && { openingHours: JSON.stringify(openingHours) }),
+        ...(doesDelivery !== undefined && { doesDelivery }),
+        ...(deliveryRadius !== undefined && { deliveryRadius }),
+      })
       .where(eq(storesTable.id, store.id))
       .returning();
     const [category] = updated.categoryId ? await db.select().from(categoriesTable).where(eq(categoriesTable.id, updated.categoryId)).limit(1) : [];

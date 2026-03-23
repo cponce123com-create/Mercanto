@@ -137,6 +137,9 @@ export const ListStoresQueryParams = zod.object({
   page: zod.coerce.number().optional(),
   limit: zod.coerce.number().optional(),
   featured: zod.coerce.boolean().optional(),
+  lat: zod.coerce.number().optional(),
+  lng: zod.coerce.number().optional(),
+  radiusKm: zod.coerce.number().optional(),
 });
 
 export const ListStoresResponse = zod.object({
@@ -176,6 +179,10 @@ export const ListStoresResponse = zod.object({
           createdAt: zod.date().nullish(),
         })
         .nullish(),
+      paymentMethods: zod.array(zod.string()).nullish(),
+      openingHours: zod.record(zod.string(), zod.string()).nullish(),
+      doesDelivery: zod.boolean().nullish(),
+      deliveryRadius: zod.number().nullish(),
     }),
   ),
   total: zod.number(),
@@ -202,6 +209,10 @@ export const CreateStoreBody = zod.object({
   logoPublicId: zod.string().optional(),
   bannerUrl: zod.string().optional(),
   bannerPublicId: zod.string().optional(),
+  paymentMethods: zod.array(zod.string()).optional(),
+  openingHours: zod.record(zod.string(), zod.string()).optional(),
+  doesDelivery: zod.boolean().optional(),
+  deliveryRadius: zod.number().optional(),
 });
 
 export const CreateStoreResponse = zod.object({
@@ -239,6 +250,10 @@ export const CreateStoreResponse = zod.object({
       createdAt: zod.date().nullish(),
     })
     .nullish(),
+  paymentMethods: zod.array(zod.string()).nullish(),
+  openingHours: zod.record(zod.string(), zod.string()).nullish(),
+  doesDelivery: zod.boolean().nullish(),
+  deliveryRadius: zod.number().nullish(),
 });
 
 /**
@@ -314,6 +329,10 @@ export const GetMyStoreResponse = zod
         createdAt: zod.date().nullish(),
       })
       .nullish(),
+    paymentMethods: zod.array(zod.string()).nullish(),
+    openingHours: zod.record(zod.string(), zod.string()).nullish(),
+    doesDelivery: zod.boolean().nullish(),
+    deliveryRadius: zod.number().nullish(),
   })
   .and(
     zod.object({
@@ -419,6 +438,10 @@ export const GetStoreBySlugResponse = zod
         createdAt: zod.date().nullish(),
       })
       .nullish(),
+    paymentMethods: zod.array(zod.string()).nullish(),
+    openingHours: zod.record(zod.string(), zod.string()).nullish(),
+    doesDelivery: zod.boolean().nullish(),
+    deliveryRadius: zod.number().nullish(),
   })
   .and(
     zod.object({
@@ -504,6 +527,10 @@ export const UpdateStoreBody = zod.object({
   logoPublicId: zod.string().optional(),
   bannerUrl: zod.string().optional(),
   bannerPublicId: zod.string().optional(),
+  paymentMethods: zod.array(zod.string()).optional(),
+  openingHours: zod.record(zod.string(), zod.string()).optional(),
+  doesDelivery: zod.boolean().optional(),
+  deliveryRadius: zod.number().optional(),
 });
 
 export const UpdateStoreResponse = zod.object({
@@ -541,6 +568,10 @@ export const UpdateStoreResponse = zod.object({
       createdAt: zod.date().nullish(),
     })
     .nullish(),
+  paymentMethods: zod.array(zod.string()).nullish(),
+  openingHours: zod.record(zod.string(), zod.string()).nullish(),
+  doesDelivery: zod.boolean().nullish(),
+  deliveryRadius: zod.number().nullish(),
 });
 
 /**
@@ -1015,6 +1046,10 @@ export const GlobalSearchResponse = zod.object({
           createdAt: zod.date().nullish(),
         })
         .nullish(),
+      paymentMethods: zod.array(zod.string()).nullish(),
+      openingHours: zod.record(zod.string(), zod.string()).nullish(),
+      doesDelivery: zod.boolean().nullish(),
+      deliveryRadius: zod.number().nullish(),
     }),
   ),
   products: zod.array(
@@ -1133,6 +1168,10 @@ export const AdminListStoresResponse = zod.object({
           createdAt: zod.date().nullish(),
         })
         .nullish(),
+      paymentMethods: zod.array(zod.string()).nullish(),
+      openingHours: zod.record(zod.string(), zod.string()).nullish(),
+      doesDelivery: zod.boolean().nullish(),
+      deliveryRadius: zod.number().nullish(),
     }),
   ),
   total: zod.number(),
@@ -1186,6 +1225,10 @@ export const AdminUpdateStoreStatusResponse = zod.object({
       createdAt: zod.date().nullish(),
     })
     .nullish(),
+  paymentMethods: zod.array(zod.string()).nullish(),
+  openingHours: zod.record(zod.string(), zod.string()).nullish(),
+  doesDelivery: zod.boolean().nullish(),
+  deliveryRadius: zod.number().nullish(),
 });
 
 /**
@@ -1230,6 +1273,10 @@ export const AdminToggleStoreFeaturedResponse = zod.object({
       createdAt: zod.date().nullish(),
     })
     .nullish(),
+  paymentMethods: zod.array(zod.string()).nullish(),
+  openingHours: zod.record(zod.string(), zod.string()).nullish(),
+  doesDelivery: zod.boolean().nullish(),
+  deliveryRadius: zod.number().nullish(),
 });
 
 /**
@@ -1445,6 +1492,79 @@ export const AdminDeleteBannerParams = zod.object({
 });
 
 export const AdminDeleteBannerResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Get current user's favorite stores
+ */
+export const GetFavoritesResponse = zod.object({
+  favorites: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      name: zod.string(),
+      slug: zod.string(),
+      description: zod.string().nullish(),
+      logoUrl: zod.string().nullish(),
+      bannerUrl: zod.string().nullish(),
+      categoryId: zod.number().nullish(),
+      location: zod.string().nullish(),
+      district: zod.string().nullish(),
+      lat: zod.string().nullish(),
+      lng: zod.string().nullish(),
+      whatsapp: zod.string().nullish(),
+      instagram: zod.string().nullish(),
+      facebook: zod.string().nullish(),
+      website: zod.string().nullish(),
+      status: zod.string(),
+      isFeatured: zod.boolean().nullish(),
+      totalVisits: zod.number().nullish(),
+      createdAt: zod.date().nullish(),
+      updatedAt: zod.date().nullish(),
+      category: zod
+        .object({
+          id: zod.number(),
+          name: zod.string(),
+          slug: zod.string(),
+          icon: zod.string().nullish(),
+          description: zod.string().nullish(),
+          parentId: zod.number().nullish(),
+          isActive: zod.boolean().nullish(),
+          sortOrder: zod.number().nullish(),
+          createdAt: zod.date().nullish(),
+        })
+        .nullish(),
+      paymentMethods: zod.array(zod.string()).nullish(),
+      openingHours: zod.record(zod.string(), zod.string()).nullish(),
+      doesDelivery: zod.boolean().nullish(),
+      deliveryRadius: zod.number().nullish(),
+    }),
+  ),
+  favoriteIds: zod.array(zod.number()),
+});
+
+/**
+ * @summary Add a store to favorites (idempotent)
+ */
+export const AddFavoriteParams = zod.object({
+  storeId: zod.coerce.number(),
+});
+
+export const AddFavoriteResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Remove a store from favorites
+ */
+export const RemoveFavoriteParams = zod.object({
+  storeId: zod.coerce.number(),
+});
+
+export const RemoveFavoriteResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });

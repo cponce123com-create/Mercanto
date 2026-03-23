@@ -7,10 +7,11 @@ import {
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/lib/contexts";
+import { useFavorites } from "@/lib/useFavorites";
 import { useEffect, useState } from "react";
 import {
   MapPin, Phone, Globe, Instagram, Facebook, Store as StoreIcon,
-  Loader2, Star, Trash2, Edit2, Send, LogIn,
+  Loader2, Star, Trash2, Edit2, Send, LogIn, Heart, Truck, Clock, CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,15 @@ import { ProductCard } from "@/components/shared/ProductCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
+
+const PAYMENT_LABELS: Record<string, string> = {
+  efectivo: "💵 Efectivo",
+  yape: "🟣 Yape",
+  plin: "🔵 Plin",
+  transferencia: "🏦 Transferencia",
+  visa: "💳 Tarjeta",
+  contra_entrega: "📦 Contra entrega",
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -331,6 +341,8 @@ export default function StoreDetail() {
     query: { enabled: !!slug, retry: false } as any,
   });
 
+  const { isFavorite, toggle, isLoggedIn } = useFavorites();
+
   const visitMutation = useIncrementStoreVisit();
   useEffect(() => {
     if (slug) visitMutation.mutate({ slug });
@@ -368,6 +380,12 @@ export default function StoreDetail() {
 
   const avg = store.averageRating ? Number(store.averageRating) : null;
   const reviewCount = store.reviewCount || 0;
+  const storeAny = store as any;
+  const paymentMethods: string[] = Array.isArray(storeAny.paymentMethods) ? storeAny.paymentMethods : [];
+  const openingHours: Record<string, string> | null = storeAny.openingHours || null;
+  const doesDelivery: boolean = storeAny.doesDelivery ?? false;
+  const deliveryRadius: number | null = storeAny.deliveryRadius ?? null;
+  const fav = isFavorite(store.id);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#F8FAFC" }}>
@@ -437,15 +455,43 @@ export default function StoreDetail() {
                       </Button>
                     </Link>
                   )}
+                  {isLoggedIn && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => toggle(store.id)}
+                      className={`h-12 rounded-xl gap-2 w-full transition-colors ${fav ? "bg-[#EF4444]/10 border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/20" : "border-gray-200 text-gray-500 hover:text-[#EF4444] hover:border-[#EF4444]/40"}`}
+                    >
+                      <Heart className={`w-5 h-5 ${fav ? "fill-current" : ""}`} />
+                      {fav ? "En Favoritos" : "Guardar"}
+                    </Button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-4 mt-5 pt-5 border-t border-gray-100">
+              <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-gray-100">
                 {store.location && <span className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-4 h-4 shrink-0" /> {store.location}</span>}
                 {store.instagram && <a href={store.instagram} target="_blank" rel="noreferrer" className="text-sm text-gray-500 hover:text-[#2563EB] flex items-center gap-1.5 transition-colors"><Instagram className="w-4 h-4" /> Instagram</a>}
                 {store.facebook && <a href={store.facebook} target="_blank" rel="noreferrer" className="text-sm text-gray-500 hover:text-[#2563EB] flex items-center gap-1.5 transition-colors"><Facebook className="w-4 h-4" /> Facebook</a>}
                 {store.website && <a href={store.website} target="_blank" rel="noreferrer" className="text-sm text-gray-500 hover:text-[#2563EB] flex items-center gap-1.5 transition-colors"><Globe className="w-4 h-4" /> Sitio Web</a>}
               </div>
+
+              {/* Delivery & Payment badges */}
+              {(doesDelivery || paymentMethods.length > 0) && (
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                  {doesDelivery && (
+                    <Badge className="bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20 gap-1.5 font-medium">
+                      <Truck className="w-3.5 h-3.5" />
+                      Delivery{deliveryRadius ? ` hasta ${deliveryRadius} km` : ""}
+                    </Badge>
+                  )}
+                  {paymentMethods.map(m => (
+                    <Badge key={m} variant="secondary" className="text-xs font-normal">
+                      {PAYMENT_LABELS[m] || m}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -495,14 +541,53 @@ export default function StoreDetail() {
 
               {/* About tab */}
               <TabsContent value="about">
-                <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100 shadow-sm">
-                  <h3 className="font-bold text-lg text-[#1E293B] mb-4">Información de la Tienda</h3>
-                  <div className="space-y-3 text-gray-600">
-                    {store.description && <p className="leading-relaxed">{store.description}</p>}
-                    {store.location && <p><strong className="text-[#1E293B]">Dirección:</strong> {store.location}, {store.district}</p>}
-                    {store.district && <p><strong className="text-[#1E293B]">Distrito:</strong> {store.district}, Chanchamayo, Junín</p>}
-                    {store.whatsapp && <p><strong className="text-[#1E293B]">WhatsApp:</strong> +{store.whatsapp}</p>}
+                <div className="bg-white rounded-2xl p-6 md:p-8 border border-gray-100 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-bold text-lg text-[#1E293B] mb-3">Información de la Tienda</h3>
+                    <div className="space-y-3 text-gray-600">
+                      {store.description && <p className="leading-relaxed">{store.description}</p>}
+                      {store.location && <p><strong className="text-[#1E293B]">Dirección:</strong> {store.location}, {store.district}</p>}
+                      {store.district && <p><strong className="text-[#1E293B]">Distrito:</strong> {store.district}, Chanchamayo, Junín</p>}
+                      {store.whatsapp && <p><strong className="text-[#1E293B]">WhatsApp:</strong> +51 {store.whatsapp}</p>}
+                      {doesDelivery && (
+                        <p className="flex items-center gap-2 text-[#16A34A] font-medium">
+                          <Truck className="w-4 h-4" />
+                          Delivery disponible{deliveryRadius ? ` (hasta ${deliveryRadius} km)` : ""}
+                        </p>
+                      )}
+                    </div>
                   </div>
+
+                  {paymentMethods.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-[#1E293B] flex items-center gap-2 mb-3">
+                        <CreditCard className="w-4 h-4" /> Métodos de Pago
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {paymentMethods.map(m => (
+                          <Badge key={m} variant="secondary" className="text-sm font-normal py-1">
+                            {PAYMENT_LABELS[m] || m}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {openingHours && Object.keys(openingHours).length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-[#1E293B] flex items-center gap-2 mb-3">
+                        <Clock className="w-4 h-4" /> Horario de Atención
+                      </h4>
+                      <div className="space-y-1.5">
+                        {Object.entries(openingHours).map(([day, hours]) => (
+                          <div key={day} className="flex justify-between text-sm">
+                            <span className="text-gray-600 font-medium w-28">{day}</span>
+                            <span className={hours?.toLowerCase() === "cerrado" ? "text-[#EF4444]" : "text-gray-700"}>{hours}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

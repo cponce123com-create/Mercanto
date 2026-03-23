@@ -113,6 +113,14 @@ React + Vite frontend for the Mercanto marketplace. Key pages:
 Auth: JWT stored in `localStorage` as `mercanto_jwt`; sent as `Authorization: Bearer` via `setAuthTokenGetter`.
 Admin credentials: `admin@mercanto.pe` / `Admin2024!`
 
+**Phase 3 features added:**
+- `userFavoritesTable` in DB; `GET/POST/DELETE /api/favorites` endpoints; `useFavorites` hook with optimistic updates
+- Store cards + detail page: heart/favorite button (logged-in users only)
+- Stores directory: "Cerca de mí" button using browser geolocation + Haversine SQL filter (`lat`, `lng`, `radiusKm` params on `GET /api/stores`)
+- Store schema extended: `paymentMethods` (JSON array), `openingHours` (JSON object), `doesDelivery` (boolean), `deliveryRadius` (integer)
+- Vendor store-settings page: payment methods checkboxes, opening hours by day, delivery toggle + radius
+- Store detail "Sobre Nosotros" tab: payment badges, opening hours table, delivery status
+
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.

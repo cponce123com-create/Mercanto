@@ -85,6 +85,8 @@ export interface CreateCategoryRequest {
   sortOrder?: number;
 }
 
+export type StoreOpeningHours = { [key: string]: string } | null;
+
 export interface Store {
   id: number;
   userId: number;
@@ -108,6 +110,10 @@ export interface Store {
   createdAt?: string | null;
   updatedAt?: string | null;
   category?: Category | null;
+  paymentMethods?: string[] | null;
+  openingHours?: StoreOpeningHours;
+  doesDelivery?: boolean | null;
+  deliveryRadius?: number | null;
 }
 
 export interface ProductImage {
@@ -171,6 +177,8 @@ export interface StoreListResponse {
   totalPages: number;
 }
 
+export type CreateStoreRequestOpeningHours = { [key: string]: string };
+
 export interface CreateStoreRequest {
   name: string;
   description?: string;
@@ -187,6 +195,10 @@ export interface CreateStoreRequest {
   logoPublicId?: string;
   bannerUrl?: string;
   bannerPublicId?: string;
+  paymentMethods?: string[];
+  openingHours?: CreateStoreRequestOpeningHours;
+  doesDelivery?: boolean;
+  deliveryRadius?: number;
 }
 
 export type UpdateStoreRequest = CreateStoreRequest;
@@ -290,6 +302,11 @@ export interface UpdateUserRoleRequest {
   role: UpdateUserRoleRequestRole;
 }
 
+export interface FavoritesResponse {
+  favorites: Store[];
+  favoriteIds: number[];
+}
+
 export type ListStoresParams = {
   district?: string;
   category?: string;
@@ -298,6 +315,9 @@ export type ListStoresParams = {
   page?: number;
   limit?: number;
   featured?: boolean;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
 };
 
 export type ListStoresSort =
@@ -337,7 +357,6 @@ export const GlobalSearchType = {
 export type AdminListStoresParams = {
   status?: string;
   page?: number;
-  limit?: number;
 };
 
 export type AdminListUsersParams = {

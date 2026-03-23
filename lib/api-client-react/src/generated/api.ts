@@ -29,6 +29,7 @@ import type {
   CreateReviewRequest,
   CreateStoreRequest,
   ErrorResponse,
+  FavoritesResponse,
   GetProductsByStoreParams,
   GlobalSearchParams,
   HealthStatus,
@@ -3456,4 +3457,247 @@ export const useAdminDeleteBanner = <
   TContext
 > => {
   return useMutation(getAdminDeleteBannerMutationOptions(options));
+};
+
+/**
+ * @summary Get current user's favorite stores
+ */
+export const getGetFavoritesUrl = () => {
+  return `/api/favorites`;
+};
+
+export const getFavorites = async (
+  options?: RequestInit,
+): Promise<FavoritesResponse> => {
+  return customFetch<FavoritesResponse>(getGetFavoritesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFavoritesQueryKey = () => {
+  return [`/api/favorites`] as const;
+};
+
+export const getGetFavoritesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFavorites>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFavorites>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFavoritesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFavorites>>> = ({
+    signal,
+  }) => getFavorites({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFavorites>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetFavoritesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getFavorites>>
+>;
+export type GetFavoritesQueryError = ErrorType<void>;
+
+/**
+ * @summary Get current user's favorite stores
+ */
+
+export function useGetFavorites<
+  TData = Awaited<ReturnType<typeof getFavorites>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getFavorites>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetFavoritesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a store to favorites (idempotent)
+ */
+export const getAddFavoriteUrl = (storeId: number) => {
+  return `/api/favorites/${storeId}`;
+};
+
+export const addFavorite = async (
+  storeId: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAddFavoriteUrl(storeId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAddFavoriteMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addFavorite>>,
+    TError,
+    { storeId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addFavorite>>,
+  TError,
+  { storeId: number },
+  TContext
+> => {
+  const mutationKey = ["addFavorite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addFavorite>>,
+    { storeId: number }
+  > = (props) => {
+    const { storeId } = props ?? {};
+
+    return addFavorite(storeId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addFavorite>>
+>;
+
+export type AddFavoriteMutationError = ErrorType<void>;
+
+/**
+ * @summary Add a store to favorites (idempotent)
+ */
+export const useAddFavorite = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addFavorite>>,
+    TError,
+    { storeId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addFavorite>>,
+  TError,
+  { storeId: number },
+  TContext
+> => {
+  return useMutation(getAddFavoriteMutationOptions(options));
+};
+
+/**
+ * @summary Remove a store from favorites
+ */
+export const getRemoveFavoriteUrl = (storeId: number) => {
+  return `/api/favorites/${storeId}`;
+};
+
+export const removeFavorite = async (
+  storeId: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getRemoveFavoriteUrl(storeId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveFavoriteMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    TError,
+    { storeId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeFavorite>>,
+  TError,
+  { storeId: number },
+  TContext
+> => {
+  const mutationKey = ["removeFavorite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    { storeId: number }
+  > = (props) => {
+    const { storeId } = props ?? {};
+
+    return removeFavorite(storeId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeFavorite>>
+>;
+
+export type RemoveFavoriteMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove a store from favorites
+ */
+export const useRemoveFavorite = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    TError,
+    { storeId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeFavorite>>,
+  TError,
+  { storeId: number },
+  TContext
+> => {
+  return useMutation(getRemoveFavoriteMutationOptions(options));
 };

@@ -71,6 +71,10 @@ export const storesTable = pgTable("stores", {
   status: text("status").default("pending").notNull(),
   isFeatured: boolean("is_featured").default(false),
   totalVisits: integer("total_visits").default(0),
+  paymentMethods: text("payment_methods"),
+  openingHours: text("opening_hours"),
+  doesDelivery: boolean("does_delivery").default(false),
+  deliveryRadius: integer("delivery_radius"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -166,3 +170,14 @@ export const reviewsTable = pgTable("reviews", {
 export const insertReviewSchema = createInsertSchema(reviewsTable).omit({ id: true, createdAt: true });
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviewsTable.$inferSelect;
+
+export const userFavoritesTable = pgTable("user_favorites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  storeId: integer("store_id").notNull().references(() => storesTable.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("user_favorites_user_store_idx").on(table.userId, table.storeId),
+]);
+
+export type UserFavorite = typeof userFavoritesTable.$inferSelect;

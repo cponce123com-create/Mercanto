@@ -1,0 +1,33 @@
+Prompt para Replit — Fase 3:
+Necesito implementar las siguientes funcionalidades nuevas para Mercanto, un marketplace vecinal:
+1. Sistema de tiendas favoritas
+
+En el schema de base de datos (lib/db/src/schema/index.ts), agrega una nueva tabla user_favorites con campos: id (serial PK), userId (integer, FK a users), storeId (integer, FK a stores), createdAt (timestamp). Agrega un índice único en (userId, storeId) para evitar duplicados.
+Genera la migración con Drizzle.
+En el API server, crea un nuevo archivo artifacts/api-server/src/routes/favorites.ts con estos endpoints, todos requiriendo requireAuth:
+
+POST /api/favorites/:storeId — agrega una tienda a favoritos. Si ya existe, devuelve 200 igualmente (idempotente).
+DELETE /api/favorites/:storeId — elimina de favoritos.
+GET /api/favorites — devuelve la lista de tiendas favoritas del usuario con los mismos campos que el endpoint GET /stores.
+
+
+Registra las rutas en artifacts/api-server/src/routes/index.ts.
+Agrega los tipos en el OpenAPI spec (lib/api-spec/openapi.yaml) y regenera el cliente con pnpm generate.
+En el frontend, agrega un botón de corazón (favorito) en el componente StoreCard.tsx. El botón debe mostrar estado lleno/vacío dependiendo si la tienda es favorita. Al hacer click debe llamar al endpoint correspondiente y actualizar el estado local sin recargar.
+
+2. Búsqueda por proximidad geográfica
+El API ya tiene lat y lng en las tiendas. Necesito agregar filtrado por distancia:
+
+En artifacts/api-server/src/routes/stores.ts, en el endpoint GET /stores, agrega parámetros opcionales de query lat, lng, y radiusKm (default 5).
+Si los tres parámetros están presentes, filtra las tiendas usando la fórmula Haversine en SQL. En PostgreSQL se puede hacer así:
+sql(6371 * acos(cos(radians(:lat)) * cos(radians(lat)) * cos(radians(lng) - radians(:lng)) + sin(radians(:lat)) * sin(radians(lat)))) < :radiusKm
+Agrégalo como condición adicional al where usando sql template literal de Drizzle.
+En el frontend, en la página de explorar tiendas, agrega un botón "Tiendas cerca de mí" que use la API del browser navigator.geolocation para obtener la posición del usuario y filtre automáticamente.
+
+3. Indicadores de métodos de pago y horarios en tiendas
+
+En el schema, agrega a storesTable: paymentMethods (text, almacenado como JSON array de strings: ["efectivo","yape","plin","tarjeta"]), openingHours (text, JSON con estructura { lunes: "9:00-18:00", ... }), doesDelivery (boolean, default false), deliveryRadius (integer, en km, nullable).
+Genera la migración.
+Actualiza los endpoints de creación y edición de tienda para aceptar y guardar estos campos.
+En el frontend, en el formulario de edición de tienda del dashboard vendedor, agrega: checkboxes para métodos de pago (Efectivo, Yape, Plin, Tarjeta), un toggle para "¿Hago delivery?", y un campo de rango de km si delivery está activo.
+En el StoreCard.tsx y en la página de detalle de tienda, muestra los badges de métodos de pago y el ícono de delivery si aplica.

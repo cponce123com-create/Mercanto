@@ -5,6 +5,7 @@
  * Mercanto — Marketplace Vecinal API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateStoreRequestOpeningHours } from "./createStoreRequestOpeningHours";
 
 export interface CreateStoreRequest {
   name: string;
@@ -22,4 +23,8 @@ export interface CreateStoreRequest {
   logoPublicId?: string;
   bannerUrl?: string;
   bannerPublicId?: string;
+  paymentMethods?: string[];
+  openingHours?: CreateStoreRequestOpeningHours;
+  doesDelivery?: boolean;
+  deliveryRadius?: number;
 }

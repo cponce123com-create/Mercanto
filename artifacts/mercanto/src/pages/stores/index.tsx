@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSearch, useLocation } from "wouter";
 import { useListStores, useListCategories } from "@workspace/api-client-react";
 import { Navbar } from "@/components/layout/Navbar";
@@ -8,7 +8,8 @@ import { StoreCard } from "@/components/shared/StoreCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, ChevronLeft, ChevronRight, MapPin, Navigation } from "lucide-react";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 24;
 
@@ -23,8 +24,36 @@ export default function StoresDirectory() {
   const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState<"newest" | "name" | "visits">("newest");
   const [page, setPage] = useState(1);
+  const [nearbyCoords, setNearbyCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
 
   const { data: categories } = useListCategories();
+
+  const handleNearMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error("Tu navegador no soporta geolocalización");
+      return;
+    }
+    if (nearbyCoords) {
+      setNearbyCoords(null);
+      setPage(1);
+      return;
+    }
+    setIsGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNearbyCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setPage(1);
+        setIsGeoLoading(false);
+        toast.success("Mostrando tiendas cerca de ti");
+      },
+      () => {
+        setIsGeoLoading(false);
+        toast.error("No se pudo obtener tu ubicación");
+      },
+      { timeout: 10000 }
+    );
+  }, [nearbyCoords]);
   
   const { data, isLoading } = useListStores({
     district: district !== 'all' ? district : undefined,
@@ -33,7 +62,10 @@ export default function StoresDirectory() {
     sort,
     page,
     limit: PAGE_SIZE,
-  });
+    lat: nearbyCoords?.lat,
+    lng: nearbyCoords?.lng,
+    radiusKm: 15,
+  } as any);
 
   const stores = data?.stores ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -91,6 +123,16 @@ export default function StoresDirectory() {
                   <SelectItem value="name">Alfabético</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button
+                variant="outline"
+                className={`shrink-0 gap-2 transition-colors ${nearbyCoords ? "bg-[#16A34A]/10 border-[#16A34A]/40 text-[#16A34A] hover:bg-[#16A34A]/20" : "bg-secondary/30 border-transparent hover:bg-secondary/50"}`}
+                onClick={handleNearMe}
+                disabled={isGeoLoading}
+              >
+                {isGeoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                <span className="hidden sm:inline">{nearbyCoords ? "Cerca de mí ✓" : "Cerca de mí"}</span>
+              </Button>
 
               <Button
                 variant="outline"

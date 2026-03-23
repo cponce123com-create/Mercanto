@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Store as StoreType, StoreDetail } from "@workspace/api-client-react";
-import { MapPin, MessageCircle, Star } from "lucide-react";
+import { MapPin, MessageCircle, Star, Heart } from "lucide-react";
+import { useFavorites } from "@/lib/useFavorites";
 
 type StoreCardStore = StoreType & Partial<Pick<StoreDetail, "averageRating" | "reviewCount">>;
 
@@ -35,12 +36,20 @@ export function StoreCard({ store }: StoreCardProps) {
   const categoryIcon = store.category ? CATEGORIES_WITH_ICONS[store.category.name] || "📦" : "📦";
   const avg = store.averageRating ? Number(store.averageRating) : null;
   const reviewCount = store.reviewCount || 0;
+  const { isFavorite, toggle, isLoggedIn } = useFavorites();
+  const fav = isFavorite(store.id);
 
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!store.whatsapp) return;
     const num = store.whatsapp.replace(/\D/g, "");
     window.open(`https://wa.me/${num.startsWith("51") ? num : `51${num}`}`, "_blank");
+  };
+
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isLoggedIn) return;
+    toggle(store.id);
   };
 
   return (
@@ -56,11 +65,22 @@ export function StoreCard({ store }: StoreCardProps) {
               {categoryIcon}
             </div>
           )}
-          {store.isFeatured && (
-            <div className="absolute top-2 right-2 bg-[#F97316] text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded">
-              Destacado
-            </div>
-          )}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {store.isFeatured && (
+              <div className="bg-[#F97316] text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded">
+                Destacado
+              </div>
+            )}
+            {isLoggedIn && (
+              <button
+                onClick={handleFavorite}
+                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center shadow transition-colors ${fav ? "bg-[#EF4444] text-white" : "bg-white/90 text-gray-400 hover:text-[#EF4444]"}`}
+                title={fav ? "Quitar de favoritos" : "Guardar en favoritos"}
+              >
+                <Heart className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${fav ? "fill-current" : ""}`} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -88,6 +108,11 @@ export function StoreCard({ store }: StoreCardProps) {
                   <span className="text-[10px] sm:text-xs text-gray-500 flex items-center gap-0.5">
                     <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     <span className="truncate max-w-[60px] sm:max-w-none">{store.district}</span>
+                  </span>
+                )}
+                {(store as any).doesDelivery && (
+                  <span className="text-[10px] sm:text-xs text-[#16A34A] bg-green-50 px-1 sm:px-1.5 py-0.5 rounded leading-tight">
+                    🚚 Delivery
                   </span>
                 )}
               </div>
