@@ -1,0 +1,183 @@
+Necesito que hagas varias cosas importantes. Lee todo antes de empezar.
+
+TAREA 1 — SEED DE 30 TIENDAS CON 10 PRODUCTOS CADA UNA
+Crea o actualiza el archivo server/db/seed.ts con 30 tiendas reales de Chanchamayo y 10 productos por tienda. Cada tienda y producto debe tener todos los datos completos como se detalla abajo.
+Reglas del seed:
+
+Usar onConflictDoNothing() para que pueda correrse varias veces sin duplicar
+Al final del seed hacer process.exit(0)
+Usar getDb() del archivo de conexión existente
+Todas las tiendas con status: 'active'
+Distribuir las tiendas entre los distritos: San Ramón, La Merced, Pichanaqui, Perené, Vitoc
+Coordenadas lat/lng reales de cada distrito para que aparezcan en el mapa
+
+Coordenadas por distrito:
+San Ramón:   lat: -11.1297, lng: -75.3500
+La Merced:   lat: -11.0567, lng: -75.3247
+Pichanaqui:  lat: -10.9333, lng: -75.0167
+Perené:      lat: -10.9500, lng: -75.2833
+Vitoc:       lat: -11.2167, lng: -75.3000
+Las 30 tiendas (nombre, categoría, distrito):
+1.  Frutería El Huerto Verde        - Frutas y Verduras      - San Ramón
+2.  Café del Bosque                 - Café y Cacao           - La Merced
+3.  Carnicería Don Julio            - Carnes y Pescados      - San Ramón
+4.  Panadería La Espiga Dorada      - Panadería y Pasteles   - La Merced
+5.  Abarrotes La Economía           - Abarrotes y Bodega     - Pichanaqui
+6.  Artesanías Selva Central        - Artesanía              - San Ramón
+7.  Miel Pura Chanchamayo           - Miel y Apicultura      - Vitoc
+8.  Verduras Don Carlos             - Frutas y Verduras      - Pichanaqui
+9.  Ropa y Calzado Styles           - Ropa y Calzado         - La Merced
+10. Farmacia Salud Total            - Farmacia y Salud       - San Ramón
+11. Ferretería El Constructor       - Ferretería             - La Merced
+12. Electrónica Tech Jungle         - Electrónica            - San Ramón
+13. Plantas Medicinales Amazónicas  - Plantas y Hierbas      - Perené
+14. Lácteos El Valle                - Abarrotes y Bodega     - Vitoc
+15. Cacao Premium Selva             - Café y Cacao           - Perené
+16. Bodega Central Pichanaqui       - Abarrotes y Bodega     - Pichanaqui
+17. Belleza y Spa Jungle            - Belleza                - La Merced
+18. Juguetes y Regalos Kids         - Otros                  - San Ramón
+19. Deportes Aventura Selva         - Otros                  - San Ramón
+20. Lodge Turismo Verde             - Turismo y Hospedaje    - Perené
+21. Insumos Agrícolas Del Campo     - Agricultura            - La Merced
+22. Pescadería Río Chanchamayo      - Carnes y Pescados      - San Ramón
+23. Heladería Tropical              - Panadería y Pasteles   - La Merced
+24. Librería y Útiles El Saber      - Otros                  - Pichanaqui
+25. Mecánica y Servicios Rapid      - Servicios Técnicos     - San Ramón
+26. Frutería Tropical Perené        - Frutas y Verduras      - Perené
+27. Café Aroma Andino               - Café y Cacao           - Vitoc
+28. Pollería y Comida La Selva      - Carnes y Pescados      - La Merced
+29. Hogar y Decoración Chanchamayo  - Hogar y Muebles        - San Ramón
+30. Mascotas y Accesorios PetShop   - Mascotas               - La Merced
+Cada tienda debe tener:
+
+name — nombre completo
+slug — generado del nombre (minúsculas, guiones, sin tildes)
+description — descripción de 2-3 oraciones realista y específica de Chanchamayo
+location — dirección inventada pero realista (Av., Jr., Calle con número)
+district — distrito correspondiente
+lat y lng — coordenadas del distrito con variación aleatoria de ±0.005 para que no se apilen en el mapa
+whatsapp — número peruano ficticio formato 51 9XXXXXXXX
+status: 'active'
+is_featured: true en las primeras 6 tiendas
+user_id — asignar al usuario admin existente o crear un usuario vendor por tienda
+
+Cada producto debe tener:
+
+name — nombre específico y real del producto
+slug — generado del nombre
+description — descripción de 1-2 oraciones con características del producto
+price — precio en soles realista para Perú
+offer_price — precio con descuento en el 60% de los productos (los otros 40% sin oferta)
+stock — número entre 5 y 100
+unit — la unidad correcta (kg, litro, unidad, docena, bolsa, etc.)
+status: 'active'
+store_id — el id de su tienda correspondiente
+
+Fotos de productos — usar imágenes de Unsplash:
+Para cada producto usar una URL de imagen real de Unsplash relacionada al producto. Usar este formato:
+https://images.unsplash.com/photo-XXXXXXXXXX?w=400&q=80
+Busca IDs reales de Unsplash para cada categoría de producto. Insertar cada foto en la tabla product_images con sort_order: 0.
+Ejemplos de IDs reales por categoría:
+Frutas:       photo-1610832958506-aa56368176cf
+Café:         photo-1447933601403-0c6688de566a
+Carne:        photo-1607623814075-e51df1bdc82f
+Pan:          photo-1509440159596-0249088772ff
+Miel:         photo-1558642452-9d2a7deb7f62
+Verduras:     photo-1540420773420-3366772f4999
+Ropa:         photo-1523381210434-271e8be1f52b
+Farmacia:     photo-1584308666744-24d5c474f2ae
+Herramienta:  photo-1504148455328-c376907d081c
+Electrónica:  photo-1498049794561-7780e7231661
+Plantas:      photo-1416879595882-3373a0480b5b
+Lácteos:      photo-1550583724-b2692b85b150
+Artesanía:    photo-1581783898377-1c85bf937427
+Pescado:      photo-1544551763-46a013bb70d5
+Helado:       photo-1501443762994-82bd5dace89a
+
+TAREA 2 — SISTEMA DE RESEÑAS Y CALIFICACIÓN EN DETALLE DE TIENDA
+En la página /store/:slug agregar debajo de los productos:
+Rating general de la tienda
+
+Mostrar el promedio de estrellas calculado de todas las reseñas de esa tienda
+Número grande con la calificación (ej: 4.3) junto a las estrellas pintadas (★★★★☆)
+Total de reseñas entre paréntesis (ej: "basado en 23 reseñas")
+Barra de distribución de ratings estilo Amazon:
+
+  5 ★ ████████████░░ 65%
+  4 ★ ██████░░░░░░░░ 30%
+  3 ★ █░░░░░░░░░░░░░  5%
+  2 ★ ░░░░░░░░░░░░░░  0%
+  1 ★ ░░░░░░░░░░░░░░  0%
+Lista de reseñas existentes
+
+Mostrar hasta 10 reseñas más recientes
+Cada reseña muestra:
+
+Avatar del usuario (iniciales si no tiene foto)
+Nombre del usuario
+Estrellas (★★★★★)
+Fecha (ej: "hace 3 días")
+Comentario completo
+
+
+Botón "Ver más reseñas" si hay más de 10
+
+Formulario para dejar reseña
+
+Solo visible para usuarios con sesión iniciada
+Si no está logueado: mensaje "Inicia sesión para dejar una reseña" con botón de login
+Un usuario solo puede dejar UNA reseña por tienda
+Si ya dejó reseña, mostrar su reseña con opción de editar o eliminar
+El formulario tiene:
+
+Selector de estrellas interactivo (click en estrella para seleccionar del 1 al 5, con hover effect)
+Textarea para el comentario (mínimo 10 caracteres, máximo 500)
+Botón "Publicar Reseña"
+Validación con Zod antes de enviar
+
+
+
+En las cards de tienda (StoreCard)
+
+Mostrar rating promedio con estrellitas debajo del nombre de la tienda
+Número de reseñas entre paréntesis
+Si no tiene reseñas: "Sin reseñas aún"
+
+Seed de reseñas
+En el seed crear también reseñas de prueba para las 30 tiendas. Para cada tienda insertar entre 5 y 15 reseñas con:
+
+Usuarios ficticios (crear 20 usuarios de prueba con rol 'user')
+Ratings variados (mayoría 4-5 estrellas, algunos 3, pocos 1-2)
+Comentarios realistas en español mencionando productos de Chanchamayo
+Fechas distribuidas en los últimos 6 meses
+
+Ejemplos de comentarios para el seed:
+"Excelente atención, el café de Chanchamayo es el mejor que he probado."
+"Muy frescos los productos, se nota que son de la zona."
+"Buenos precios y variedad, volveré a comprar."
+"La miel es pura y natural, la recomiendo al 100%."
+"Entrega rápida y empaque cuidadoso, muy satisfecho."
+"El mejor café de toda la selva central, aroma increíble."
+"Productos frescos directamente del campo, sin intermediarios."
+"Atención amable y precios justos para la zona."
+"La fruta tropical es fresca y dulce, de primera calidad."
+"Muy buena tienda, ya es mi proveedor de confianza."
+
+TAREA 3 — AGREGAR AL package.json
+json"db:seed": "tsx server/db/seed.ts"
+```
+
+Y el Build Command en render.yaml debe ser:
+```
+pnpm install && pnpm build && pnpm db:push && pnpm db:seed
+
+RESUMEN DE LO QUE DEBE QUEDAR AL FINAL
+
+30 tiendas activas con datos reales en la DB
+300 productos (10 por tienda) con fotos de Unsplash
+20 usuarios de prueba con rol 'user'
+Entre 150 y 450 reseñas distribuidas en las 30 tiendas
+Rating promedio visible en cards y detalle de tienda
+Formulario de reseña funcional con estrellas interactivas
+Distribución de ratings estilo Amazon en detalle de tienda
+Todo el mapa con 30 marcadores distribuidos en Chanchamayo

@@ -1,29 +1,27 @@
 import { Link } from "wouter";
 import { Store as StoreType } from "@workspace/api-client-react";
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin, MessageCircle, Star } from "lucide-react";
 
 const CATEGORIES_WITH_ICONS: Record<string, string> = {
   "Abarrotes y Bodega": "🛒",
   "Frutas y Verduras": "🍎",
   "Carnes y Pescados": "🥩",
-  "Panadería y Pasteles": "🥖",
-  "Lácteos y Huevos": "🥚",
-  "Bebidas": "🥤",
+  "Panadería y Pasteles": "🥐",
+  "Bebidas y Jugos": "🧃",
   "Café y Cacao": "☕",
-  "Ropa y Calzado": "👔",
-  "Artesanía Local": "🎨",
-  "Hogar y Decoración": "🏠",
-  "Electrónica": "💻",
-  "Salud y Belleza": "💄",
-  "Ferretería": "🔧",
-  "Librería y Útiles": "📚",
-  "Muebles": "🛋️",
-  "Jardín y Plantas": "🌿",
+  "Miel y Apicultura": "🍯",
+  "Plantas y Hierbas": "🌿",
+  "Ropa y Calzado": "👗",
+  "Artesanía": "🧶",
+  "Hogar y Muebles": "🏠",
+  "Electrónica y Tecnología": "📱",
+  "Belleza y Cuidado Personal": "💄",
+  "Farmacia y Salud": "💊",
+  "Ferretería y Construcción": "🔧",
   "Mascotas": "🐾",
-  "Juguetes": "🧸",
-  "Deportes": "⚽",
-  "Restaurante": "🍽️",
-  "Servicios": "⚙️",
+  "Turismo y Hospedaje": "🏕️",
+  "Agricultura e Insumos": "🌾",
+  "Servicios Técnicos": "🛠️",
   "Otros": "📦",
 };
 
@@ -33,13 +31,14 @@ interface StoreCardProps {
 
 export function StoreCard({ store }: StoreCardProps) {
   const categoryIcon = store.category ? CATEGORIES_WITH_ICONS[store.category.name] || "📦" : "📦";
+  const avg = store.averageRating ? Number(store.averageRating) : null;
+  const reviewCount = store.reviewCount || 0;
 
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!store.whatsapp) return;
-    const num = store.whatsapp.replace(/\D/g, '');
-    const finalNum = num.startsWith('51') ? num : `51${num}`;
-    window.open(`https://wa.me/${finalNum}`, '_blank');
+    const num = store.whatsapp.replace(/\D/g, "");
+    window.open(`https://wa.me/${num.startsWith("51") ? num : `51${num}`}`, "_blank");
   };
 
   return (
@@ -96,10 +95,30 @@ export function StoreCard({ store }: StoreCardProps) {
             {store.description || "Sin descripción disponible."}
           </p>
 
+          {/* Rating */}
+          <div className="mt-2 mb-1">
+            {avg !== null ? (
+              <div className="flex items-center gap-1">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <Star
+                      key={n}
+                      className={`w-3 h-3 ${n <= Math.round(avg) ? "fill-[#F59E0B] text-[#F59E0B]" : "fill-gray-200 text-gray-200"}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs font-semibold text-[#F59E0B]">{avg.toFixed(1)}</span>
+                <span className="text-xs text-gray-400">({reviewCount})</span>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">Sin reseñas aún</span>
+            )}
+          </div>
+
           <button
             onClick={handleWhatsApp}
             disabled={!store.whatsapp}
-            className="mt-3 w-full py-2 rounded-lg bg-[#25D366]/10 text-[#128C7E] text-sm font-semibold hover:bg-[#25D366]/20 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-2 w-full py-2 rounded-lg bg-[#25D366]/10 text-[#128C7E] text-sm font-semibold hover:bg-[#25D366]/20 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <MessageCircle className="w-4 h-4" />
             {store.whatsapp ? "Contactar" : "Sin WhatsApp"}

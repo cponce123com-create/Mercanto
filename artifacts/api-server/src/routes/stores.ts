@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, storesTable, categoriesTable, productsTable, productImagesTable, storeGalleryImagesTable, reviewsTable, usersTable } from "@workspace/db";
-import { eq, and, ilike, or, desc, asc, sql, isNotNull, count } from "drizzle-orm";
+import { eq, and, ilike, or, desc, asc, sql, isNotNull, count, inArray } from "drizzle-orm";
 import { requireAuth, requireVendor, optionalAuth } from "../lib/auth.js";
 import { generateUniqueStoreSlug } from "../lib/slug.js";
 
@@ -224,10 +224,28 @@ router.get("/:slug", optionalAuth, async (req, res) => {
     const [{ count: reviewCount }] = await db.select({ count: count() }).from(reviewsTable).where(and(eq(reviewsTable.storeId, store.id), eq(reviewsTable.isVisible, true)));
     const [avgResult] = await db.select({ avg: sql<number>`AVG(${reviewsTable.rating})` }).from(reviewsTable).where(and(eq(reviewsTable.storeId, store.id), eq(reviewsTable.isVisible, true)));
 
+    // Load products with images
+    const rawProducts = await db
+      .select()
+      .from(productsTable)
+      .where(and(eq(productsTable.storeId, store.id), eq(productsTable.status, "active")))
+      .orderBy(asc(productsTable.sortOrder), asc(productsTable.id))
+      .limit(30);
+
+    const productIds = rawProducts.map(p => p.id);
+    const allImages = productIds.length > 0
+      ? await db.select().from(productImagesTable).where(inArray(productImagesTable.productId, productIds)).orderBy(productImagesTable.sortOrder)
+      : [];
+
+    const products = rawProducts.map(p => ({
+      ...p,
+      images: allImages.filter(img => img.productId === p.id),
+    }));
+
     res.json({
       ...store,
       category: category || null,
-      products: [],
+      products,
       galleryImages,
       reviewCount: Number(reviewCount),
       averageRating: avgResult.avg ? Number(avgResult.avg) : null,
