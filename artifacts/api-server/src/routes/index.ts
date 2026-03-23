@@ -11,6 +11,7 @@ import reviewsRouter from "./reviews.js";
 import adminRouter from "./admin.js";
 import uploadRouter from "./upload.js";
 import favoritesRouter from "./favorites.js";
+import cronRouter from "./cron.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/reviews", reviewsRouter);
 router.use("/admin", adminRouter);
 router.use("/upload", uploadRouter);
 router.use("/favorites", favoritesRouter);
+router.use("/cron", cronRouter);
 
 export default router;

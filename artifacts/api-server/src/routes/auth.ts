@@ -4,6 +4,7 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { signToken, requireAuth } from "../lib/auth.js";
 import { authLimiter } from "../middlewares/rateLimiter.js";
+import { sendWelcomeEmail } from "../services/email.js";
 
 const router: IRouter = Router();
 
@@ -30,6 +31,7 @@ router.post("/register", async (req, res) => {
     const token = signToken({ userId: user.id, role: user.role });
     const { passwordHash: _h, ...userPublic } = user;
     res.cookie("mercanto_token", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
+    sendWelcomeEmail(user.email, user.name).catch(() => {});
     res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false } });
   } catch (err) {
     req.log.error(err);

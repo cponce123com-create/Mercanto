@@ -1,0 +1,223 @@
+Prompt para Replit — Integración de email con Resend:
+Necesito integrar el servicio de email Resend en el proyecto Mercanto. Implementa los siguientes 4 emails transaccionales.
+
+SETUP INICIAL
+Instala el SDK: pnpm add resend --filter @workspace/api-server
+Crea el archivo artifacts/api-server/src/services/email.ts con este contenido base:
+tsimport { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM = process.env.EMAIL_FROM || "Mercanto <noreply@mercanto.pe>";
+
+export async function sendEmail(to: string, subject: string, html: string) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set, skipping email to:", to);
+    return;
+  }
+  try {
+    await resend.emails.send({ from: FROM, to, subject, html });
+  } catch (err) {
+    console.error("[email] Failed to send email:", err);
+  }
+}
+Agrega al .env.example:
+# Email (Resend)
+RESEND_API_KEY=
+EMAIL_FROM=Mercanto <noreply@mercanto.pe>
+
+EMAIL 1 — Bienvenida al registrarse
+En artifacts/api-server/src/services/email.ts agrega esta función:
+tsexport async function sendWelcomeEmail(to: string, name: string) {
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#f97316;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:24px">¡Bienvenido a Mercanto!</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${name}</strong>,</p>
+        <p style="font-size:15px;color:#444">Ya eres parte de la comunidad de tu barrio. Ahora puedes explorar tiendas cercanas, ver sus productos y contactar a los vendedores directamente.</p>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${process.env.FRONTEND_URL}" style="background:#f97316;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Explorar tiendas</a>
+        </div>
+        <p style="font-size:13px;color:#999;margin-top:32px">Si no creaste esta cuenta, ignora este mensaje.</p>
+      </div>
+    </div>`;
+  await sendEmail(to, "¡Bienvenido a Mercanto! 🎉", html);
+}
+En artifacts/api-server/src/routes/auth.ts, al final del bloque try del endpoint POST /register, justo antes del res.json(...), agrega:
+tssendWelcomeEmail(user.email, user.name).catch(() => {});
+Importa la función al inicio del archivo: import { sendWelcomeEmail } from "../services/email.js";
+
+EMAIL 2 — Aprobación de tienda por el admin
+En artifacts/api-server/src/services/email.ts agrega:
+tsexport async function sendStoreApprovedEmail(to: string, ownerName: string, storeName: string, storeSlug: string) {
+  const storeUrl = `${process.env.FRONTEND_URL}/tienda/${storeSlug}`;
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#16a34a;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:24px">¡Tu tienda fue aprobada!</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${ownerName}</strong>,</p>
+        <p style="font-size:15px;color:#444">Tu tienda <strong>${storeName}</strong> ha sido revisada y aprobada. Ya está visible para todos los vecinos del barrio.</p>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${storeUrl}" style="background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Ver mi tienda</a>
+        </div>
+        <p style="font-size:14px;color:#444">Recuerda mantener tus productos actualizados y responder rápido a los clientes. ¡Mucho éxito!</p>
+      </div>
+    </div>`;
+  await sendEmail(to, `¡Tu tienda "${storeName}" fue aprobada en Mercanto! ✅`, html);
+}
+En artifacts/api-server/src/routes/admin.ts, en el endpoint PUT /stores/:id/status, después de hacer el update en la DB, agrega este bloque:
+tsif (status === "active") {
+  const [owner] = await db
+    .select({ email: usersTable.email, name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, updated.userId))
+    .limit(1);
+  if (owner) {
+    sendStoreApprovedEmail(owner.email, owner.name, updated.name, updated.slug).catch(() => {});
+  }
+}
+Agrega el import de usersTable si no está, y el import de sendStoreApprovedEmail desde "../services/email.js".
+
+EMAIL 3 — Notificación de nueva reseña al vendedor
+En artifacts/api-server/src/services/email.ts agrega:
+tsexport async function sendNewReviewEmail(to: string, ownerName: string, storeName: string, storeSlug: string, reviewerName: string, rating: number, comment: string | null) {
+  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+  const storeUrl = `${process.env.FRONTEND_URL}/tienda/${storeSlug}`;
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#f97316;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:22px">Nueva reseña en ${storeName}</h1>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${ownerName}</strong>,</p>
+        <p style="font-size:15px;color:#444"><strong>${reviewerName}</strong> dejó una reseña en tu tienda:</p>
+        <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:20px 0">
+          <p style="font-size:22px;margin:0 0 8px;color:#f97316">${stars}</p>
+          ${comment ? `<p style="font-size:15px;color:#333;margin:0;font-style:italic">"${comment}"</p>` : '<p style="font-size:14px;color:#999;margin:0">Sin comentario adicional.</p>'}
+        </div>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${storeUrl}" style="background:#f97316;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Ver mi tienda</a>
+        </div>
+      </div>
+    </div>`;
+  await sendEmail(to, `Nueva reseña de ${rating} estrellas en "${storeName}"`, html);
+}
+En artifacts/api-server/src/routes/stores.ts, en el endpoint que crea una review (busca donde se hace db.insert(reviewsTable)), justo después del insert agrega:
+tsconst [storeOwner] = await db
+  .select({ email: usersTable.email, name: usersTable.name })
+  .from(usersTable)
+  .where(eq(usersTable.id, store.userId))
+  .limit(1);
+if (storeOwner) {
+  sendNewReviewEmail(
+    storeOwner.email,
+    storeOwner.name,
+    store.name,
+    store.slug,
+    req.body.reviewerName || "Un vecino",
+    req.body.rating,
+    req.body.comment || null
+  ).catch(() => {});
+}
+El nombre del reviewer lo puedes obtener también haciendo un select a usersTable con el userId del request autenticado si prefieres. Importa sendNewReviewEmail desde "../services/email.js".
+
+EMAIL 4 — Resumen semanal para vendedores
+En artifacts/api-server/src/services/email.ts agrega:
+tsexport async function sendWeeklySummaryEmail(to: string, ownerName: string, storeName: string, storeSlug: string, stats: { visits: number; newReviews: number; avgRating: number | null; totalProducts: number }) {
+  const storeUrl = `${process.env.FRONTEND_URL}/dashboard`;
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a">
+      <div style="background:#1e40af;padding:32px;text-align:center;border-radius:12px 12px 0 0">
+        <h1 style="color:#fff;margin:0;font-size:22px">Tu resumen semanal</h1>
+        <p style="color:#bfdbfe;margin:8px 0 0;font-size:14px">${storeName}</p>
+      </div>
+      <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px">
+        <p style="font-size:16px">Hola <strong>${ownerName}</strong>, esto pasó en tu tienda esta semana:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0">
+          <div style="background:#eff6ff;border-radius:8px;padding:16px;text-align:center">
+            <p style="font-size:28px;font-weight:700;color:#1e40af;margin:0">${stats.visits}</p>
+            <p style="font-size:13px;color:#555;margin:4px 0 0">visitas</p>
+          </div>
+          <div style="background:#f0fdf4;border-radius:8px;padding:16px;text-align:center">
+            <p style="font-size:28px;font-weight:700;color:#16a34a;margin:0">${stats.newReviews}</p>
+            <p style="font-size:13px;color:#555;margin:4px 0 0">reseñas nuevas</p>
+          </div>
+          <div style="background:#fff7ed;border-radius:8px;padding:16px;text-align:center">
+            <p style="font-size:28px;font-weight:700;color:#ea580c;margin:0">${stats.avgRating ? stats.avgRating.toFixed(1) : "—"}</p>
+            <p style="font-size:13px;color:#555;margin:4px 0 0">rating promedio</p>
+          </div>
+          <div style="background:#faf5ff;border-radius:8px;padding:16px;text-align:center">
+            <p style="font-size:28px;font-weight:700;color:#7c3aed;margin:0">${stats.totalProducts}</p>
+            <p style="font-size:13px;color:#555;margin:4px 0 0">productos activos</p>
+          </div>
+        </div>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${storeUrl}" style="background:#1e40af;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Ver mi dashboard</a>
+        </div>
+      </div>
+    </div>`;
+  await sendEmail(to, `Tu resumen semanal en Mercanto — ${storeName}`, html);
+}
+Luego crea el archivo artifacts/api-server/src/routes/cron.ts con este endpoint protegido que dispara el envío masivo:
+tsimport { Router, type IRouter } from "express";
+import { db, storesTable, usersTable, reviewsTable, productsTable } from "@workspace/db";
+import { eq, and, gte, count, avg, sql } from "drizzle-orm";
+import { sendWeeklySummaryEmail } from "../services/email.js";
+
+const router: IRouter = Router();
+
+router.post("/weekly-summary", async (req, res) => {
+  const secret = req.headers["x-cron-secret"];
+  if (!secret || secret !== process.env.CRON_SECRET) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const vendors = await db
+    .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.role, "vendor"));
+
+  let sent = 0;
+  for (const vendor of vendors) {
+    const [store] = await db.select().from(storesTable).where(and(eq(storesTable.userId, vendor.id), eq(storesTable.status, "active"))).limit(1);
+    if (!store) continue;
+
+    const [{ totalProducts }] = await db.select({ totalProducts: count() }).from(productsTable).where(and(eq(productsTable.storeId, store.id), eq(productsTable.status, "active")));
+    const [{ newReviews }] = await db.select({ newReviews: count() }).from(reviewsTable).where(and(eq(reviewsTable.storeId, store.id), gte(reviewsTable.createdAt, oneWeekAgo)));
+    const [{ avgRating }] = await db.select({ avgRating: avg(reviewsTable.rating) }).from(reviewsTable).where(eq(reviewsTable.storeId, store.id));
+
+    await sendWeeklySummaryEmail(vendor.email, vendor.name, store.name, store.slug, {
+      visits: store.totalVisits ?? 0,
+      newReviews: Number(newReviews),
+      avgRating: avgRating ? Number(avgRating) : null,
+      totalProducts: Number(totalProducts),
+    });
+    sent++;
+  }
+
+  res.json({ success: true, sent });
+});
+
+export default router;
+Registra la ruta en artifacts/api-server/src/routes/index.ts:
+tsimport cronRouter from "./cron.js";
+router.use("/cron", cronRouter);
+Agrega al .env.example:
+# Cron jobs
+CRON_SECRET=
+Para disparar el resumen semanal automáticamente, configura en Replit un Scheduled Job (o usa un servicio externo como cron-job.org) que haga POST /api/cron/weekly-summary con el header x-cron-secret: TU_SECRET todos los lunes a las 9am.
+
+VERIFICACIÓN FINAL
+
+Corre pnpm typecheck y asegúrate de que no hay errores.
+Agrega RESEND_API_KEY y CRON_SECRET a las variables de entorno de Replit.
+Para obtener tu API key de Resend ve a resend.com, crea una cuenta gratuita, y genera una key en el dashboard. El plan gratuito incluye 3,000 emails/mes.
+Para que los emails lleguen con tu dominio (@mercanto.pe) deberás verificar el dominio en Resend agregando los registros DNS que te indican. Mientras tanto puedes usar el dominio de prueba que Resend asigna por defecto.

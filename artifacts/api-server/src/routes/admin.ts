@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usersTable, storesTable, productsTable, productImagesTable, reviewsTable, categoriesTable, bannersTable } from "@workspace/db";
 import { eq, desc, asc, count, sql, inArray } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth.js";
+import { sendStoreApprovedEmail } from "../services/email.js";
 
 const router: IRouter = Router();
 
@@ -83,6 +84,16 @@ router.put("/stores/:id/status", async (req, res) => {
       return;
     }
     const [updated] = await db.update(storesTable).set({ status, updatedAt: new Date() }).where(eq(storesTable.id, id)).returning();
+    if (status === "active") {
+      const [owner] = await db
+        .select({ email: usersTable.email, name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, updated.userId))
+        .limit(1);
+      if (owner) {
+        sendStoreApprovedEmail(owner.email, owner.name, updated.name, updated.slug).catch(() => {});
+      }
+    }
     res.json({ ...updated, category: null });
   } catch (err) {
     req.log.error(err);

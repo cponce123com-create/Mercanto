@@ -3,6 +3,7 @@ import { db, storesTable, categoriesTable, productsTable, productImagesTable, st
 import { eq, and, ilike, or, desc, asc, sql, isNotNull, count, inArray } from "drizzle-orm";
 import { requireAuth, requireVendor, optionalAuth } from "../lib/auth.js";
 import { generateUniqueStoreSlug } from "../lib/slug.js";
+import { sendNewReviewEmail } from "../services/email.js";
 
 function parsePaymentMethods(raw: string | null): string[] {
   if (!raw) return [];
@@ -450,13 +451,33 @@ router.post("/:storeSlug/reviews", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Bad Request", message: "rating must be between 1 and 5" });
       return;
     }
-    const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.slug, storeSlug)).limit(1);
+    const [store] = await db
+      .select({ id: storesTable.id, userId: storesTable.userId, name: storesTable.name, slug: storesTable.slug })
+      .from(storesTable)
+      .where(eq(storesTable.slug, storeSlug))
+      .limit(1);
     if (!store) {
       res.status(404).json({ error: "Not Found", message: "Store not found" });
       return;
     }
     const [review] = await db.insert(reviewsTable).values({ storeId: store.id, userId, rating, comment, isVisible: true }).returning();
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const [storeOwner] = await db
+      .select({ email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, store.userId))
+      .limit(1);
+    if (storeOwner && storeOwner.email !== user.email) {
+      sendNewReviewEmail(
+        storeOwner.email,
+        storeOwner.name,
+        store.name,
+        store.slug,
+        user.name,
+        rating,
+        comment ?? null,
+      ).catch(() => {});
+    }
     res.json({ ...review, user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, district: user.district, isBlocked: false } });
   } catch (err) {
     req.log.error(err);
