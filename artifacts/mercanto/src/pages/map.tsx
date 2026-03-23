@@ -139,8 +139,7 @@ export default function MapPage() {
           {!isLoading && categories.length > 0 && (
             <div className="absolute top-3 left-3 right-3 z-[1000] pointer-events-none">
               <div
-                className="flex gap-2 overflow-x-auto pointer-events-auto"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                className="flex gap-2 overflow-x-auto pointer-events-auto no-scrollbar"
               >
                 {/* Todas */}
                 <button
