@@ -126,3 +126,24 @@
     display: none;
   }
 }
+
+/* Footer: force all text to be visible on dark background */
+.site-footer,
+.site-footer p,
+.site-footer li,
+.site-footer span {
+  color: #cbd5e1 !important;
+}
+.site-footer h4 {
+  color: #ffffff !important;
+}
+.site-footer a {
+  color: #cbd5e1 !important;
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: #ffffff !important;
+}
+.site-footer .border-t p {
+  color: #94a3b8 !important;
+}
