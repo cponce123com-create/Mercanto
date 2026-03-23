@@ -1,0 +1,74 @@
+Necesito 5 correcciones pequeñas en el proyecto Mercanto:
+1. Cookie secure en producción — artifacts/api-server/src/routes/auth.ts
+Hay dos llamadas a res.cookie("mercanto_token", ...) (en /register y /login). En ambas, reemplaza las opciones actuales por:
+ts{
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+}
+2. Validación de contraseña mínima — mismo archivo, endpoint /register
+Justo después de la validación de campos requeridos (if (!name || !email || !password)), agrega:
+tsif (password.length < 8) {
+  res.status(400).json({ error: "Bad Request", message: "La contraseña debe tener al menos 8 caracteres" });
+  return;
+}
+3. Bug de ownership en DELETE producto — artifacts/api-server/src/routes/products.ts
+En el endpoint DELETE /:id, la condición actual permite borrar si no hay tienda Y el rol es admin, sin verificar que el producto realmente pertenece a esa tienda. Reemplaza toda la lógica del delete por esta versión segura:
+tsrouter.delete("/:id", requireVendor, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const userRole = req.userRole;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Bad Request", message: "Invalid id" });
+      return;
+    }
+    if (userRole === "admin") {
+      await db.delete(productImagesTable).where(eq(productImagesTable.productId, id));
+      await db.delete(productsTable).where(eq(productsTable.id, id));
+      res.json({ success: true, message: "Product deleted" });
+      return;
+    }
+    const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.userId, userId)).limit(1);
+    if (!store) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.storeId, store.id))).limit(1);
+    if (!product) {
+      res.status(404).json({ error: "Not Found", message: "Product not found" });
+      return;
+    }
+    await db.delete(productImagesTable).where(eq(productImagesTable.productId, id));
+    await db.delete(productsTable).where(eq(productsTable.id, id));
+    res.json({ success: true, message: "Product deleted" });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal Server Error", message: "Failed to delete product" });
+  }
+});
+4. Subir el rate limit general — artifacts/api-server/src/middlewares/rateLimiter.ts
+En el apiLimiter, cambia max: 100 por max: 300. El límite de 100 es demasiado bajo para un frontend que hace varias llamadas al cargar cada página.
+5. Crear archivo .env.example en la raíz del proyecto
+Crea el archivo /Mercanto-main/.env.example con este contenido exacto:
+env# Base de datos
+DATABASE_URL=postgresql://usuario:password@host:5432/mercanto
+
+# Autenticación — genera un valor seguro con: openssl rand -base64 32
+JWT_SECRET=
+
+# Frontend (URL donde corre el frontend para CORS)
+FRONTEND_URL=http://localhost:5173
+
+# Cloudinary (subida de imágenes)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# Límites
+MAX_PRODUCTS_PER_STORE=30
+
+# Entorno
+NODE_ENV=development
+Después de los cambios, corre pnpm typecheck para verificar que todo compile sin errores.

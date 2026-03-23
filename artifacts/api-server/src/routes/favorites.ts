@@ -68,7 +68,7 @@ router.get("/", requireAuth, async (req, res) => {
 router.post("/:storeId", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const storeId = parseInt(req.params.storeId);
+    const storeId = parseInt(String(req.params.storeId));
     if (isNaN(storeId)) {
       res.status(400).json({ error: "Bad Request", message: "Invalid storeId" });
       return;
@@ -89,7 +89,7 @@ router.post("/:storeId", requireAuth, async (req, res) => {
 router.delete("/:storeId", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const storeId = parseInt(req.params.storeId);
+    const storeId = parseInt(String(req.params.storeId));
     if (isNaN(storeId)) {
       res.status(400).json({ error: "Bad Request", message: "Invalid storeId" });
       return;

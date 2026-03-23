@@ -14,6 +14,10 @@ router.post("/register", async (req, res) => {
       res.status(400).json({ error: "Bad Request", message: "name, email, password are required" });
       return;
     }
+    if (password.length < 8) {
+      res.status(400).json({ error: "Bad Request", message: "La contraseña debe tener al menos 8 caracteres" });
+      return;
+    }
     const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
     if (existing.length > 0) {
       res.status(400).json({ error: "Bad Request", message: "Email already in use" });
@@ -25,7 +29,7 @@ router.post("/register", async (req, res) => {
     }).returning();
     const token = signToken({ userId: user.id, role: user.role });
     const { passwordHash: _h, ...userPublic } = user;
-    res.cookie("mercanto_token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+    res.cookie("mercanto_token", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false } });
   } catch (err) {
     req.log.error(err);
@@ -57,7 +61,7 @@ router.post("/login", authLimiter, async (req, res) => {
     await db.update(usersTable).set({ lastSignedIn: new Date() }).where(eq(usersTable.id, user.id));
     const token = signToken({ userId: user.id, role: user.role });
     const { passwordHash: _h, ...userPublic } = user;
-    res.cookie("mercanto_token", token, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: "lax" });
+    res.cookie("mercanto_token", token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.json({ user: { ...userPublic, isBlocked: user.isBlocked ?? false } });
   } catch (err) {
     req.log.error(err);

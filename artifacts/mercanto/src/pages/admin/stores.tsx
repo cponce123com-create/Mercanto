@@ -17,7 +17,6 @@ export default function AdminStores() {
   const { data, isLoading } = useAdminListStores({
     status: status !== 'all' ? status : undefined,
     page,
-    limit: 50,
   });
   const queryClient = useQueryClient();
 

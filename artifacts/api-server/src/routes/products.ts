@@ -181,12 +181,27 @@ router.put("/:id", requireVendor, async (req, res) => {
 
 router.delete("/:id", requireVendor, async (req, res) => {
   try {
-    const userId = (req as any).userId;
-    const userRole = (req as any).userRole;
+    const userId = req.userId;
+    const userRole = req.userRole;
     const id = parseInt(String(req.params.id));
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Bad Request", message: "Invalid id" });
+      return;
+    }
+    if (userRole === "admin") {
+      await db.delete(productImagesTable).where(eq(productImagesTable.productId, id));
+      await db.delete(productsTable).where(eq(productsTable.id, id));
+      res.json({ success: true, message: "Product deleted" });
+      return;
+    }
     const [store] = await db.select({ id: storesTable.id }).from(storesTable).where(eq(storesTable.userId, userId)).limit(1);
-    if (!store && userRole !== "admin") {
+    if (!store) {
       res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(and(eq(productsTable.id, id), eq(productsTable.storeId, store.id))).limit(1);
+    if (!product) {
+      res.status(404).json({ error: "Not Found", message: "Product not found" });
       return;
     }
     await db.delete(productImagesTable).where(eq(productImagesTable.productId, id));
