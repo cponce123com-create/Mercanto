@@ -29,6 +29,9 @@ if (!basePath) {
 const API_PORT = process.env.API_PORT || "8080";
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || ''),
+  },
   base: basePath,
   plugins: [
     react(),

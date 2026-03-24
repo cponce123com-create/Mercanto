@@ -53,6 +53,8 @@ function buildAllowedOrigins(): string[] {
     origins.push(`https://${replitDomain}`);
   }
 
+  logger.info({ origins }, "CORS allowed origins configured");
+
   return origins;
 }
 
@@ -70,10 +72,13 @@ app.use(cors({
     } else if (
       origin.endsWith(".replit.dev") ||
       origin.endsWith(".repl.co") ||
-      origin.endsWith(".replit.app")
+      origin.endsWith(".replit.app") ||
+      origin.endsWith(".onrender.com") ||
+      origin.endsWith(".render.com")
     ) {
       callback(null, true);
     } else {
+      logger.warn({ origin }, "CORS: Origin not allowed");
       callback(new Error(`CORS: Origin not allowed: ${origin}`));
     }
   },
